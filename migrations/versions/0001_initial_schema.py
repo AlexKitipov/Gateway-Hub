@@ -24,6 +24,8 @@ def upgrade() -> None:
         sa.Column("is_premium", sa.Boolean(), nullable=False, server_default=sa.false()),
         sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.true()),
         sa.Column("premium_until", sa.DateTime(), nullable=True),
+        sa.Column("email_verified", sa.Boolean(), nullable=False, server_default=sa.false()),
+        sa.Column("email_verification_token", sa.String(length=255), nullable=True),
         sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
         sa.UniqueConstraint("email", name="uq_users_email"),
@@ -44,6 +46,7 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
         sa.Column("expires_at", sa.DateTime(), nullable=True),
+        sa.Column("custom_domain", sa.String(length=255), nullable=True),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
         sa.UniqueConstraint("code", name="uq_links_code"),
     )
@@ -60,6 +63,7 @@ def upgrade() -> None:
         sa.Column("referer", sa.Text(), nullable=True),
         sa.Column("ip_address", sa.String(length=45), nullable=True),
         sa.Column("country", sa.String(length=2), nullable=True),
+        sa.Column("city", sa.String(length=100), nullable=True),
         sa.Column("clicked_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
         sa.ForeignKeyConstraint(["link_id"], ["links.id"], ondelete="CASCADE"),
     )
@@ -67,8 +71,49 @@ def upgrade() -> None:
     op.create_index("idx_analytics_clicked_at", "link_analytics", ["clicked_at"])
     op.create_index("idx_analytics_ip", "link_analytics", ["ip_address"])
 
+    op.create_table(
+        "subscriptions",
+        sa.Column("id", sa.Integer(), primary_key=True),
+        sa.Column("user_id", sa.Integer(), nullable=False),
+        sa.Column("stripe_customer_id", sa.String(length=255), nullable=True),
+        sa.Column("stripe_subscription_id", sa.String(length=255), nullable=True),
+        sa.Column("plan_name", sa.String(length=50), nullable=True),
+        sa.Column("status", sa.String(length=50), nullable=True),
+        sa.Column("current_period_start", sa.DateTime(), nullable=True),
+        sa.Column("current_period_end", sa.DateTime(), nullable=True),
+        sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
+        sa.Column("updated_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
+        sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
+        sa.UniqueConstraint("user_id", name="uq_subscriptions_user_id"),
+    )
+    op.create_index("idx_subscriptions_user_id", "subscriptions", ["user_id"])
+    op.create_index("idx_subscriptions_stripe", "subscriptions", ["stripe_customer_id"])
+
+    op.create_table(
+        "audit_logs",
+        sa.Column("id", sa.Integer(), primary_key=True),
+        sa.Column("user_id", sa.Integer(), nullable=True),
+        sa.Column("action", sa.String(length=100), nullable=False),
+        sa.Column("resource_type", sa.String(length=50), nullable=True),
+        sa.Column("resource_id", sa.Integer(), nullable=True),
+        sa.Column("details", sa.JSON(), nullable=True),
+        sa.Column("ip_address", sa.String(length=45), nullable=True),
+        sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
+        sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="SET NULL"),
+    )
+    op.create_index("idx_audit_user_id", "audit_logs", ["user_id"])
+    op.create_index("idx_audit_created_at", "audit_logs", ["created_at"])
+
 
 def downgrade() -> None:
+    op.drop_index("idx_audit_created_at", table_name="audit_logs")
+    op.drop_index("idx_audit_user_id", table_name="audit_logs")
+    op.drop_table("audit_logs")
+
+    op.drop_index("idx_subscriptions_stripe", table_name="subscriptions")
+    op.drop_index("idx_subscriptions_user_id", table_name="subscriptions")
+    op.drop_table("subscriptions")
+
     op.drop_index("idx_analytics_ip", table_name="link_analytics")
     op.drop_index("idx_analytics_clicked_at", table_name="link_analytics")
     op.drop_index("idx_analytics_link_id", table_name="link_analytics")

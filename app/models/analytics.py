@@ -13,6 +13,7 @@ class LinkAnalytics(Base):
     referer = Column(Text, nullable=True)
     ip_address = Column(String(45), nullable=True)
     country = Column(String(2), nullable=True)
+    city = Column(String(100), nullable=True)
     clicked_at = Column(DateTime, server_default=func.now(), nullable=False)
 
     link = relationship("Link", back_populates="analytics")
