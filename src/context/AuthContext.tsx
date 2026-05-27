@@ -1,45 +1,100 @@
-import { createContext, ReactNode, useEffect, useMemo, useState } from 'react';
-import { authApi, LoginPayload, RegisterPayload } from '../services/api';
-import { User } from '../types';
+import React, { createContext, useCallback, useEffect, useState } from 'react';
+import { apiClient } from '../services/api';
+import { AUTH_TOKEN_KEY, USER_KEY } from '../config';
+import {
+  AuthContextType,
+  LoginCredentials,
+  RegisterCredentials,
+  User,
+} from '../types';
 
-interface AuthContextValue {
-  user: User | null;
-  loading: boolean;
-  login: (payload: LoginPayload) => Promise<void>;
-  register: (payload: RegisterPayload) => Promise<void>;
-  logout: () => void;
+export const AuthContext = createContext<AuthContextType | undefined>(
+  undefined
+);
+
+interface AuthProviderProps {
+  children: React.ReactNode;
 }
 
-export const AuthContext = createContext<AuthContextValue | undefined>(undefined);
-
-export function AuthProvider({ children }: { children: ReactNode }) {
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
+  // Initialize from localStorage
   useEffect(() => {
-    authApi
-      .me()
-      .then((res) => setUser(res.data.data))
-      .catch(() => setUser(null))
-      .finally(() => setLoading(false));
+    const savedUser = localStorage.getItem(USER_KEY);
+    const savedToken = localStorage.getItem(AUTH_TOKEN_KEY);
+
+    if (savedUser && savedToken) {
+      try {
+        setUser(JSON.parse(savedUser));
+      } catch (err) {
+        localStorage.removeItem(USER_KEY);
+        localStorage.removeItem(AUTH_TOKEN_KEY);
+      }
+    }
+    setIsLoading(false);
   }, []);
 
-  const value = useMemo<AuthContextValue>(
-    () => ({
-      user,
-      loading,
-      login: async (payload) => {
-        const res = await authApi.login(payload);
-        setUser(res.data.data.user);
-      },
-      register: async (payload) => {
-        const res = await authApi.register(payload);
-        setUser(res.data.data.user);
-      },
-      logout: () => setUser(null),
-    }),
-    [user, loading],
-  );
+  const login = useCallback(async (credentials: LoginCredentials) => {
+    try {
+      setError(null);
+      setIsLoading(true);
+      const response = await apiClient.login(credentials);
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
+      localStorage.setItem(AUTH_TOKEN_KEY, response.token);
+      localStorage.setItem(USER_KEY, JSON.stringify(response.user));
+      setUser(response.user);
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : 'Login failed';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const register = useCallback(async (credentials: RegisterCredentials) => {
+    try {
+      setError(null);
+      setIsLoading(true);
+      const response = await apiClient.register(credentials);
+
+      localStorage.setItem(AUTH_TOKEN_KEY, response.token);
+      localStorage.setItem(USER_KEY, JSON.stringify(response.user));
+      setUser(response.user);
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : 'Registration failed';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const logout = useCallback(() => {
+    apiClient.logout().catch(console.error);
+    localStorage.removeItem(AUTH_TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+    setUser(null);
+  }, []);
+
+  const value: AuthContextType = {
+    user,
+    isAuthenticated: !!user,
+    isLoading,
+    error,
+    login,
+    register,
+    logout,
+  };
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
