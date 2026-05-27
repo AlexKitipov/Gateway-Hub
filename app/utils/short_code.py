@@ -1,4 +1,4 @@
-import random
+import secrets
 
 from sqlalchemy.orm import Session
 
@@ -15,10 +15,18 @@ async def generate_short_code(db: Session, length: int = None) -> str:
     max_attempts = 100
 
     for _ in range(max_attempts):
-        code = "".join(random.choice(alphabet) for _ in range(length))
+        code = "".join(secrets.choice(alphabet) for _ in range(length))
 
         existing = db.query(Link).filter(Link.code == code).first()
         if not existing:
             return code
 
     return await generate_short_code(db, length + 1)
+
+
+def validate_custom_code(code: str) -> bool:
+    """Validate custom short-code format."""
+    if not 3 <= len(code) <= 20:
+        return False
+
+    return all(char.isalnum() or char in {"-", "_"} for char in code)
