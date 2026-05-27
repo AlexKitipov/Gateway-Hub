@@ -1,51 +1,113 @@
-import { createContext, ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
-import { linksApi } from '../services/api';
-import { ShortLink } from '../types';
+import React, { createContext, useCallback, useState } from 'react';
+import { apiClient } from '../services/api';
+import {
+  LinksContextType,
+  ShortLink,
+  CreateLinkRequest,
+  UserStats,
+} from '../types';
 
-interface LinksContextValue {
-  links: ShortLink[];
-  loading: boolean;
-  refresh: () => Promise<void>;
-  createLink: (originalUrl: string) => Promise<void>;
-  deleteLink: (id: string) => Promise<void>;
+export const LinksContext = createContext<LinksContextType | undefined>(
+  undefined
+);
+
+interface LinksProviderProps {
+  children: React.ReactNode;
 }
 
-export const LinksContext = createContext<LinksContextValue | undefined>(undefined);
-
-export function LinksProvider({ children }: { children: ReactNode }) {
+export const LinksProvider: React.FC<LinksProviderProps> = ({ children }) => {
   const [links, setLinks] = useState<ShortLink[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<UserStats | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
+  const fetchLinks = useCallback(async () => {
     try {
-      const res = await linksApi.getAll();
-      setLinks(res.data.data);
+      setError(null);
+      setIsLoading(true);
+      const [linksData, statsData] = await Promise.all([
+        apiClient.getLinks(),
+        apiClient.getUserStats(),
+      ]);
+      setLinks(linksData);
+      setStats(statsData);
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : 'Failed to fetch links';
+      setError(errorMessage);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
-
-  const value = useMemo<LinksContextValue>(
-    () => ({
-      links,
-      loading,
-      refresh,
-      createLink: async (originalUrl) => {
-        const res = await linksApi.create({ originalUrl });
-        setLinks((prev) => [res.data.data, ...prev]);
-      },
-      deleteLink: async (id) => {
-        await linksApi.remove(id);
-        setLinks((prev) => prev.filter((item) => item.id !== id));
-      },
-    }),
-    [links, loading, refresh],
+  const createLink = useCallback(
+    async (data: CreateLinkRequest): Promise<ShortLink> => {
+      try {
+        setError(null);
+        setIsLoading(true);
+        const newLink = await apiClient.createLink(data);
+        setLinks((prev) => [newLink, ...prev]);
+        return newLink;
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : 'Failed to create link';
+        setError(errorMessage);
+        throw err;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
   );
 
-  return <LinksContext.Provider value={value}>{children}</LinksContext.Provider>;
-}
+  const deleteLink = useCallback(async (code: string) => {
+    try {
+      setError(null);
+      setIsLoading(true);
+      await apiClient.deleteLink(code);
+      setLinks((prev) => prev.filter((link) => link.code !== code));
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : 'Failed to delete link';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const upgradeAccount = useCallback(async () => {
+    try {
+      setError(null);
+      setIsLoading(true);
+      await apiClient.upgradeAccount();
+      if (stats) {
+        setStats({ ...stats, plan: 'premium' });
+      }
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : 'Failed to upgrade account';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [stats]);
+
+  const value: LinksContextType = {
+    links,
+    isLoading,
+    error,
+    stats,
+    fetchLinks,
+    createLink,
+    deleteLink,
+    upgradeAccount,
+  };
+
+  return (
+    <LinksContext.Provider value={value}>
+      {children}
+    </LinksContext.Provider>
+  );
+};
