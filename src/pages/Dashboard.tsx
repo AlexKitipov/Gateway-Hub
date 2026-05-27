@@ -1,100 +1,98 @@
 import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useLinks } from '../hooks/useLinks';
-import { LinkForm } from '../components/LinkForm';
-import { LinkTable } from '../components/LinkTable';
-import { FREE_TIER_LIMITS } from '../config';
-import './Dashboard.css';
+import LinkForm from '../components/LinkForm';
+import LinkTable from '../components/LinkTable';
+import { useNavigate } from 'react-router-dom';
 
-export const Dashboard: React.FC = () => {
+const Dashboard: React.FC = () => {
+  const { user } = useAuth();
+  const { links, stats, loading, fetchLinks, fetchStats, upgrade } = useLinks();
   const navigate = useNavigate();
-  const { user, isAuthenticated } = useAuth();
-  const { stats, fetchLinks, upgradeAccount, isLoading } = useLinks();
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!user) {
       navigate('/login');
       return;
     }
     fetchLinks();
-  }, [isAuthenticated, navigate, fetchLinks]);
+    fetchStats();
+  }, [user, fetchLinks, fetchStats, navigate]);
+
+  const handleUpgrade = async () => {
+    try {
+      await upgrade();
+    } catch (err) {
+      console.error('Upgrade failed:', err);
+    }
+  };
 
   if (!user) {
-    return <div className="loading">Loading...</div>;
+    return <div>Redirecting...</div>;
   }
 
-  const linksThisMonth = stats?.links_this_month || 0;
-  const isPremium = user.is_premium;
-
   return (
-    <div className="dashboard">
-      <div className="dashboard-container">
-        <div className="dashboard-header">
-          <div>
-            <h1>Dashboard</h1>
-            <p className="user-info">
-              {isPremium ? '⭐ Premium User' : '📦 Free Plan'}
-            </p>
-          </div>
+    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+        <h1>Dashboard</h1>
+        {!user.is_premium && (
+          <button
+            onClick={handleUpgrade}
+            style={{
+              padding: '0.75rem 1.5rem',
+              backgroundColor: '#764ba2',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              fontSize: '1rem',
+              fontWeight: '600',
+              cursor: 'pointer',
+            }}
+          >
+            Upgrade to Premium
+          </button>
+        )}
+      </div>
 
-          {!isPremium && (
-            <button
-              onClick={upgradeAccount}
-              disabled={isLoading}
-              className="upgrade-btn"
-            >
-              {isLoading ? 'Processing...' : 'Upgrade to Premium'}
-            </button>
-          )}
+      {/* Stats */}
+      {stats && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+          <div style={{ backgroundColor: '#f3f4f6', padding: '1rem', borderRadius: '8px' }}>
+            <div style={{ fontSize: '0.9rem', color: '#666' }}>Plan</div>
+            <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{user.is_premium ? 'Premium' : 'Free'}</div>
+          </div>
+          <div style={{ backgroundColor: '#f3f4f6', padding: '1rem', borderRadius: '8px' }}>
+            <div style={{ fontSize: '0.9rem', color: '#666' }}>Total Links</div>
+            <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{stats.total_links}</div>
+          </div>
+          <div style={{ backgroundColor: '#f3f4f6', padding: '1rem', borderRadius: '8px' }}>
+            <div style={{ fontSize: '0.9rem', color: '#666' }}>Total Clicks</div>
+            <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{stats.total_clicks}</div>
+          </div>
+          <div style={{ backgroundColor: '#f3f4f6', padding: '1rem', borderRadius: '8px' }}>
+            <div style={{ fontSize: '0.9rem', color: '#666' }}>This Month</div>
+            <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{stats.links_this_month}</div>
+          </div>
         </div>
+      )}
 
-        {stats && (
-          <div className="stats-grid">
-            <div className="stat-card">
-              <div className="stat-label">Total Links</div>
-              <div className="stat-value">{stats.total_links}</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-label">Total Clicks</div>
-              <div className="stat-value">{stats.total_clicks}</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-label">This Month</div>
-              <div className="stat-value">
-                {linksThisMonth}
-                {!isPremium && `/${FREE_TIER_LIMITS.LINKS_PER_MONTH}`}
-              </div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-label">Plan</div>
-              <div className="stat-value">
-                {isPremium ? 'Premium ⭐' : 'Free'}
-              </div>
-            </div>
-          </div>
+      {/* Create Link Form */}
+      <div style={{ marginBottom: '2rem' }}>
+        <h2 style={{ marginBottom: '1rem' }}>Create New Short Link</h2>
+        <LinkForm />
+      </div>
+
+      {/* Links Table */}
+      <div>
+        <h2 style={{ marginBottom: '1rem' }}>Your Links</h2>
+        {loading ? (
+          <p>Loading...</p>
+        ) : (
+          <LinkTable links={links} isPremium={user.is_premium} />
         )}
-
-        {!isPremium && (
-          <div className="tier-warning">
-            <span className="warning-icon">⚠️</span>
-            <div className="warning-content">
-              <p>
-                <strong>Free tier limit:</strong> You can create{' '}
-                {FREE_TIER_LIMITS.LINKS_PER_MONTH} links per month. Each link
-                can receive up to {FREE_TIER_LIMITS.CLICKS_PER_LINK} clicks.
-              </p>
-              <p>
-                Upgrade to Premium for unlimited links, custom domains, and
-                advanced analytics.
-              </p>
-            </div>
-          </div>
-        )}
-
-        <LinkForm isPremium={isPremium} linksThisMonth={linksThisMonth} />
-        <LinkTable />
       </div>
     </div>
   );
 };
+
+export default Dashboard;
