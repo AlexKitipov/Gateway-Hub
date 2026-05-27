@@ -1,3 +1,140 @@
+.tableContainer {
+  background: white;
+  border-radius: 8px;
+  padding: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.tableContainer h2 {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  color: #333;
+  font-size: 1.5rem;
+}
+
+.loading,
+.empty {
+  padding: 2rem;
+  text-align: center;
+  color: #666;
+  font-size: 1rem;
+}
+
+.tableWrapper {
+  overflow-x: auto;
+}
+
 .table {
   width: 100%;
+  border-collapse: collapse;
+}
+
+.table thead {
+  background-color: #f5f5f5;
+  border-bottom: 2px solid #ddd;
+}
+
+.table th {
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: #333;
+  font-size: 0.95rem;
+}
+
+.table td {
+  padding: 1rem;
+  border-bottom: 1px solid #eee;
+  vertical-align: middle;
+}
+
+.table tbody tr:hover {
+  background-color: #f9f9f9;
+}
+
+.codeCell {
+  font-family: 'Monaco', 'Courier New', monospace;
+  color: #667eea;
+  font-weight: 600;
+}
+
+.codeCell code {
+  background-color: #f0f4ff;
+  padding: 0.25rem 0.5rem;
+  border-radius: 3px;
+}
+
+.targetCell {
+  max-width: 300px;
+  word-break: break-word;
+}
+
+.targetCell a {
+  color: #667eea;
+  text-decoration: none;
+}
+
+.targetCell a:hover {
+  text-decoration: underline;
+}
+
+.clicksCell {
+  font-weight: 600;
+  color: #764ba2;
+  text-align: center;
+}
+
+.actionsCell {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.copyBtn,
+.deleteBtn {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  padding: 0.25rem;
+}
+
+.copyBtn:hover,
+.deleteBtn:hover {
+  transform: scale(1.2);
+}
+
+.copyBtn:disabled,
+.deleteBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+  .tableContainer {
+    padding: 1rem;
+  }
+
+  .table {
+    font-size: 0.9rem;
+  }
+
+  .table th,
+  .table td {
+    padding: 0.75rem 0.5rem;
+  }
+
+  .targetCell {
+    max-width: 150px;
+  }
+
+  .actionsCell {
+    gap: 0.25rem;
+  }
+
+  .copyBtn,
+  .deleteBtn {
+    font-size: 1rem;
+  }
 }
