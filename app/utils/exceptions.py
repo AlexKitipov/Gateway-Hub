@@ -1,6 +1,12 @@
-class AppException(Exception):
-    def __init__(self, status_code: int, detail: str, error_code: str):
-        self.status_code = status_code
-        self.detail = detail
+from fastapi import HTTPException, status
+
+
+class AppException(HTTPException):
+    def __init__(
+        self,
+        status_code: int = status.HTTP_400_BAD_REQUEST,
+        detail: str = "Bad request",
+        error_code: str = "BAD_REQUEST",
+    ):
+        super().__init__(status_code=status_code, detail=detail)
         self.error_code = error_code
-        super().__init__(detail)
