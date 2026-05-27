@@ -18,7 +18,7 @@ from app.schemas.link import (
 )
 from app.security import get_current_user
 from app.utils.exceptions import AppException
-from app.utils.short_code import generate_short_code
+from app.utils.short_code import generate_short_code, validate_custom_code
 
 router = APIRouter()
 
@@ -83,6 +83,13 @@ async def create_link(
             )
 
     if request.custom_code:
+        if not validate_custom_code(request.custom_code):
+            raise AppException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid custom code format",
+                error_code="INVALID_CODE",
+            )
+
         existing = db.query(Link).filter(Link.code == request.custom_code).first()
         if existing:
             raise AppException(
