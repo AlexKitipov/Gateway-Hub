@@ -1,87 +1,58 @@
-from fastapi import FastAPI, Request, status
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from slowapi.errors import RateLimitExceeded
 
-from app.api.v1 import analytics, auth, links, users
+from app.api.v1 import analytics, auth, links, redirect, users
 from app.config import settings
-from app.middleware.logging import setup_logging
-from app.rate_limit import limiter
-from app.utils.exceptions import AppException
+from app.database import init_db
 
-logger = setup_logging("gateway_hub")
 
-app = FastAPI(
-    title=settings.APP_NAME,
-    version=settings.APP_VERSION,
-    debug=settings.DEBUG,
-)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await init_db()
+    yield
 
-app.state.limiter = limiter
+
+app = FastAPI(title=settings.APP_NAME, version="1.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=settings.CORS_ALLOW_METHODS,
-    allow_headers=settings.CORS_ALLOW_HEADERS,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
+app.include_router(auth.router)
+app.include_router(links.router)
+app.include_router(redirect.router)
+app.include_router(analytics.router)
+app.include_router(users.router)
 
-@app.exception_handler(AppException)
-async def app_exception_handler(request: Request, exc: AppException):
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
     return JSONResponse(
-        status_code=exc.status_code,
+        status_code=500,
         content={
             "success": False,
-            "message": exc.detail,
-            "error_code": exc.error_code,
+            "error": {
+                "code": "INTERNAL_SERVER_ERROR",
+                "message": "An unexpected error occurred",
+            },
         },
     )
 
 
-@app.exception_handler(RateLimitExceeded)
-async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
-    return JSONResponse(
-        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-        content={
-            "success": False,
-            "message": "Rate limit exceeded",
-            "error_code": "RATE_LIMIT_EXCEEDED",
-        },
-    )
-
-
-app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
-app.include_router(users.router, prefix="/api/v1/user", tags=["user"])
-app.include_router(links.router, prefix="/api/v1/links", tags=["links"])
-app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["analytics"])
-
-
-@app.get("/health", tags=["health"])
-async def health_check():
-    return {
-        "status": "ok",
-        "version": settings.APP_VERSION,
-    }
-
-
-@app.get("/", tags=["root"])
-async def root():
-    return {
-        "message": f"Welcome to {settings.APP_NAME}",
-        "version": settings.APP_VERSION,
-        "docs": "/docs",
-    }
+@app.get("/health")
+async def health():
+    """Health check endpoint."""
+    return {"status": "healthy", "service": settings.APP_NAME}
 
 
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(
-        "app.main:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=settings.DEBUG,
-        workers=4 if not settings.DEBUG else 1,
-    )
+    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)
