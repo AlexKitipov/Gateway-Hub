@@ -14,6 +14,8 @@ class User(Base):
     is_premium = Column(Boolean, default=False, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
     premium_until = Column(DateTime, nullable=True)
+    email_verified = Column(Boolean, default=False, nullable=False)
+    email_verification_token = Column(String(255), nullable=True)
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 

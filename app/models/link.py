@@ -18,6 +18,7 @@ class Link(Base):
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
     expires_at = Column(DateTime, nullable=True)
+    custom_domain = Column(String(255), nullable=True)
 
     user = relationship("User", back_populates="links")
     analytics = relationship("LinkAnalytics", back_populates="link", cascade="all, delete-orphan")
