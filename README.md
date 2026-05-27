@@ -1,9 +1,9 @@
 # Gateway-Hub
-A minimal, production‑ready URL‑shortening service with free &amp; premium tiers. Built with Flask + SQLite, deployable on any cheap VPS or serverless platform.
+A minimal, production-ready URL-shortening service with free & premium tiers. Built with FastAPI + PostgreSQL (dev-friendly defaults included).
 
 🚀 Gateway Hub — Minimal URL‑Shortening SaaS (Free & Premium Tiers)
 Gateway Hub is a lightweight, production‑ready SaaS application that provides URL shortening with free and premium subscription tiers.
-It is built with Flask + SQLite, requires no external database, and can run on any low‑cost VPS or serverless platform.
+It is built with FastAPI + SQLAlchemy + PostgreSQL, and can run on low-cost VPS infrastructure or container platforms.
 
 This project is intentionally minimal, easy to deploy, and designed to be extended into a full SaaS product.
 
@@ -32,24 +32,24 @@ In production, integrate Stripe, PayPal, or another billing provider.
 🏗️ Tech Stack
 Python 3.10+
 
-Flask (web framework)
+FastAPI (web framework)
 
-SQLite (embedded database)
+PostgreSQL (primary database)
 
 Werkzeug (password hashing)
 
-HTML templates inline for simplicity
+REST API + React frontend
 
 📁 Project Structure
 Код
 Gateway-Hub/
 │
-├── app.py               # Main Flask application
-├── schema.sql           # Database schema
+├── app/                 # FastAPI backend
+├── src/                 # React/TypeScript frontend
+├── migrations/          # Alembic migrations
 ├── requirements.txt     # Python dependencies
-├── README.md            # Project documentation
-├── LICENSE              # MIT license
-└── .gitignore
+├── package.json         # Frontend dependencies
+└── README.md            # Project documentation
 📦 Installation
 Clone the repository:
 
@@ -61,21 +61,20 @@ Install dependencies:
 bash
 pip install -r requirements.txt
 🗄️ Database Setup
-Initialize the SQLite database:
+Run migrations (configure your database URL first in environment variables):
 
 bash
-python
->>> from app import init_db
->>> init_db()
-This creates shortener.db with all required tables.
+alembic upgrade head
+
+This creates the required PostgreSQL schema.
 
 ▶️ Running the Application
 bash
-python app.py
+uvicorn app.main:app --reload
 The service will be available at:
 
 Код
-http://127.0.0.1:5000
+http://127.0.0.1:8000
 🔐 Security Notes
 Replace the default dev-secret-key with a secure key in production.
 
@@ -83,11 +82,9 @@ Always run behind HTTPS.
 
 Consider adding:
 
-CSRF protection (Flask‑WTF)
+CSRF protection for browser-only flows
 
-Rate limiting (Flask‑Limiter)
-
-Logging & monitoring
+Structured logging & monitoring enhancements
 
 Reverse proxy (Nginx) + Gunicorn for production
 
