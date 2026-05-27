@@ -1,99 +1,143 @@
-import React, { createContext, useCallback, useEffect, useState } from 'react';
-import { apiClient } from '../services/api';
-import { AUTH_TOKEN_KEY, USER_KEY } from '../config';
-import {
-  AuthContextType,
-  LoginCredentials,
-  RegisterCredentials,
-  User,
-} from '../types';
+import React, { createContext, useReducer, useCallback, ReactNode } from 'react';
+import { User, AuthContextType } from '../types';
+import { authAPI } from '../services/api';
 
-export const AuthContext = createContext<AuthContextType | undefined>(
-  undefined
-);
-
-interface AuthProviderProps {
-  children: React.ReactNode;
+interface AuthState {
+  user: User | null;
+  token: string | null;
+  loading: boolean;
+  error: string | null;
 }
 
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+type AuthAction =
+  | { type: 'LOGIN_START' }
+  | { type: 'LOGIN_SUCCESS'; payload: { user: User; token: string } }
+  | { type: 'LOGIN_ERROR'; payload: string }
+  | { type: 'LOGOUT' }
+  | { type: 'RESTORE_TOKEN'; payload: { user: User | null; token: string | null } };
 
-  // Initialize from localStorage
-  useEffect(() => {
-    const savedUser = localStorage.getItem(USER_KEY);
-    const savedToken = localStorage.getItem(AUTH_TOKEN_KEY);
+const initialState: AuthState = {
+  user: null,
+  token: null,
+  loading: true,
+  error: null,
+};
 
-    if (savedUser && savedToken) {
+const authReducer = (state: AuthState, action: AuthAction): AuthState => {
+  switch (action.type) {
+    case 'LOGIN_START':
+      return { ...state, loading: true, error: null };
+    case 'LOGIN_SUCCESS':
+      return {
+        ...state,
+        loading: false,
+        user: action.payload.user,
+        token: action.payload.token,
+      };
+    case 'LOGIN_ERROR':
+      return { ...state, loading: false, error: action.payload };
+    case 'LOGOUT':
+      return { ...state, user: null, token: null };
+    case 'RESTORE_TOKEN':
+      return {
+        ...state,
+        loading: false,
+        user: action.payload.user,
+        token: action.payload.token,
+      };
+    default:
+      return state;
+  }
+};
+
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [state, dispatch] = useReducer(authReducer, initialState);
+
+  // Restore token from localStorage on mount
+  React.useEffect(() => {
+    const restoreToken = () => {
+      const token = localStorage.getItem('access_token');
+      const userStr = localStorage.getItem('user');
+      const user = userStr ? JSON.parse(userStr) : null;
+
+      dispatch({
+        type: 'RESTORE_TOKEN',
+        payload: { token, user },
+      });
+    };
+
+    restoreToken();
+  }, []);
+
+  const login = useCallback(async (email: string, password: string) => {
+    dispatch({ type: 'LOGIN_START' });
+    try {
+      const response = await authAPI.login(email, password);
+      const { user, access_token, refresh_token } = response.data;
+
+      localStorage.setItem('access_token', access_token);
+      localStorage.setItem('refresh_token', refresh_token);
+      localStorage.setItem('user', JSON.stringify(user));
+
+      dispatch({
+        type: 'LOGIN_SUCCESS',
+        payload: { user, token: access_token },
+      });
+    } catch (error: any) {
+      const message = error.response?.data?.error?.message || 'Login failed';
+      dispatch({ type: 'LOGIN_ERROR', payload: message });
+      throw error;
+    }
+  }, []);
+
+  const register = useCallback(
+    async (email: string, password: string, full_name?: string) => {
+      dispatch({ type: 'LOGIN_START' });
       try {
-        setUser(JSON.parse(savedUser));
-      } catch (err) {
-        localStorage.removeItem(USER_KEY);
-        localStorage.removeItem(AUTH_TOKEN_KEY);
+        const response = await authAPI.register(email, password, full_name);
+        const { user, access_token, refresh_token } = response.data;
+
+        localStorage.setItem('access_token', access_token);
+        localStorage.setItem('refresh_token', refresh_token);
+        localStorage.setItem('user', JSON.stringify(user));
+
+        dispatch({
+          type: 'LOGIN_SUCCESS',
+          payload: { user, token: access_token },
+        });
+      } catch (error: any) {
+        const message = error.response?.data?.error?.message || 'Registration failed';
+        dispatch({ type: 'LOGIN_ERROR', payload: message });
+        throw error;
       }
-    }
-    setIsLoading(false);
-  }, []);
+    },
+    []
+  );
 
-  const login = useCallback(async (credentials: LoginCredentials) => {
+  const logout = useCallback(async () => {
     try {
-      setError(null);
-      setIsLoading(true);
-      const response = await apiClient.login(credentials);
-
-      localStorage.setItem(AUTH_TOKEN_KEY, response.token);
-      localStorage.setItem(USER_KEY, JSON.stringify(response.user));
-      setUser(response.user);
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : 'Login failed';
-      setError(errorMessage);
-      throw err;
+      await authAPI.logout();
     } finally {
-      setIsLoading(false);
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('user');
+      dispatch({ type: 'LOGOUT' });
     }
   }, []);
-
-  const register = useCallback(async (credentials: RegisterCredentials) => {
-    try {
-      setError(null);
-      setIsLoading(true);
-      const response = await apiClient.register(credentials);
-
-      localStorage.setItem(AUTH_TOKEN_KEY, response.token);
-      localStorage.setItem(USER_KEY, JSON.stringify(response.user));
-      setUser(response.user);
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : 'Registration failed';
-      setError(errorMessage);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  const logout = useCallback(() => {
-    apiClient.logout().catch(console.error);
-    localStorage.removeItem(AUTH_TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
-    setUser(null);
-  }, []);
-
-  const value: AuthContextType = {
-    user,
-    isAuthenticated: !!user,
-    isLoading,
-    error,
-    login,
-    register,
-    logout,
-  };
 
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider
+      value={{
+        user: state.user,
+        token: state.token,
+        loading: state.loading,
+        login,
+        register,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
