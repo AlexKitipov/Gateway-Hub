@@ -1,43 +1,50 @@
+from pydantic import BaseModel, EmailStr, Field
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, EmailStr, Field
 
-
-class UserRegisterRequest(BaseModel):
+class UserBase(BaseModel):
     email: EmailStr
+    full_name: Optional[str] = None
+
+
+class UserCreate(UserBase):
     password: str = Field(..., min_length=8, max_length=255)
-    full_name: Optional[str] = Field(None, max_length=255)
 
 
-class UserLoginRequest(BaseModel):
+class UserLogin(BaseModel):
     email: EmailStr
     password: str
 
 
-class UserResponse(BaseModel):
+class UserUpdate(BaseModel):
+    full_name: Optional[str] = None
+    email: Optional[EmailStr] = None
+
+
+class UserResponse(UserBase):
     id: int
-    email: str
-    full_name: Optional[str]
     is_premium: bool
     is_active: bool
-    premium_until: Optional[datetime]
+    premium_until: Optional[datetime] = None
     created_at: datetime
 
     class Config:
         from_attributes = True
 
 
-class AuthResponse(BaseModel):
-    user: UserResponse
-    access_token: str
-    refresh_token: str
-    token_type: str = "bearer"
-
-
-class UserStatsResponse(BaseModel):
+class UserStats(BaseModel):
     total_links: int
     total_clicks: int
     links_this_month: int
     is_premium: bool
-    premium_until: Optional[datetime]
+    premium_until: Optional[datetime] = None
+    links_limit: int
+    links_remaining: int
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
+    user: UserResponse
