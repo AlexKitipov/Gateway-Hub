@@ -1,13 +1,12 @@
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
-from slowapi.util import get_remote_address
 
 from app.api.v1 import analytics, auth, links, users
 from app.config import settings
 from app.middleware.logging import setup_logging
+from app.rate_limit import limiter
 from app.utils.exceptions import AppException
 
 logger = setup_logging("gateway_hub")
@@ -18,15 +17,14 @@ app = FastAPI(
     debug=settings.DEBUG,
 )
 
-limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=settings.CORS_ALLOW_METHODS,
+    allow_headers=settings.CORS_ALLOW_HEADERS,
 )
 
 

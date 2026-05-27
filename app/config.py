@@ -22,10 +22,19 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
+
     # CORS
     ALLOWED_ORIGINS: list[str] = os.getenv(
         "ALLOWED_ORIGINS",
         "http://localhost:3000,http://localhost:5173",
+    ).split(",")
+    CORS_ALLOW_METHODS: list[str] = os.getenv(
+        "CORS_ALLOW_METHODS",
+        "GET,POST,PUT,PATCH,DELETE,OPTIONS",
+    ).split(",")
+    CORS_ALLOW_HEADERS: list[str] = os.getenv(
+        "CORS_ALLOW_HEADERS",
+        "Authorization,Content-Type",
     ).split(",")
 
     # Rate Limiting
