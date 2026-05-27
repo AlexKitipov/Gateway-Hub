@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.orm import Session
 
-from app.config import settings
 from app.database.session import get_db
+from app.rate_limit import limiter
 from app.models.user import User
 from app.schemas.user import AuthResponse, UserLoginRequest, UserRegisterRequest, UserResponse
 from app.security import create_token, hash_password, verify_password
@@ -12,9 +12,10 @@ router = APIRouter()
 
 
 @router.post("/register", response_model=AuthResponse)
-async def register(request: UserRegisterRequest, db: Session = Depends(get_db)):
+@limiter.limit("3/minute")
+async def register(request: Request, payload: UserRegisterRequest, db: Session = Depends(get_db)):
     """Register a new user."""
-    existing_user = db.query(User).filter(User.email == request.email).first()
+    existing_user = db.query(User).filter(User.email == payload.email).first()
     if existing_user:
         raise AppException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -23,9 +24,9 @@ async def register(request: UserRegisterRequest, db: Session = Depends(get_db)):
         )
 
     user = User(
-        email=request.email,
-        password_hash=hash_password(request.password),
-        full_name=request.full_name,
+        email=payload.email,
+        password_hash=hash_password(payload.password),
+        full_name=payload.full_name,
         is_premium=False,
     )
     db.add(user)
@@ -43,11 +44,12 @@ async def register(request: UserRegisterRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/login", response_model=AuthResponse)
-async def login(request: UserLoginRequest, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+async def login(request: Request, payload: UserLoginRequest, db: Session = Depends(get_db)):
     """Login user."""
-    user = db.query(User).filter(User.email == request.email).first()
+    user = db.query(User).filter(User.email == payload.email).first()
 
-    if not user or not verify_password(request.password, user.password_hash):
+    if not user or not verify_password(payload.password, user.password_hash):
         raise AppException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
@@ -78,7 +80,8 @@ async def logout():
 
 
 @router.post("/refresh", response_model=AuthResponse)
-async def refresh_token(refresh_token: str, db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+async def refresh_token(request: Request, refresh_token: str, db: Session = Depends(get_db)):
     """Refresh access token using refresh token."""
     from app.security import verify_token
 
