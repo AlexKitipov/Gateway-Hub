@@ -1,19 +1,24 @@
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Index
 from sqlalchemy.orm import relationship
-
-from app.database.base import Base
+from datetime import datetime
+from app.database import Base
 
 
 class LinkAnalytics(Base):
     __tablename__ = "link_analytics"
 
     id = Column(Integer, primary_key=True, index=True)
-    link_id = Column(Integer, ForeignKey("links.id"), nullable=False, index=True)
-    user_agent = Column(Text, nullable=True)
-    referer = Column(Text, nullable=True)
-    ip_address = Column(String(45), nullable=True)
-    country = Column(String(2), nullable=True)
-    city = Column(String(100), nullable=True)
-    clicked_at = Column(DateTime, server_default=func.now(), nullable=False)
+    link_id = Column(Integer, ForeignKey("links.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_agent = Column(Text)
+    referer = Column(Text)
+    ip_address = Column(String(45), index=True)
+    country = Column(String(2))
+    city = Column(String(100))
+    clicked_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
 
+    # Relationships
     link = relationship("Link", back_populates="analytics")
+
+    __table_args__ = (
+        Index("idx_analytics_link_clicked", "link_id", "clicked_at"),
+    )
