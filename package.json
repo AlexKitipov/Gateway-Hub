@@ -1,19 +1,22 @@
 {
   "name": "gateway-hub-frontend",
   "version": "1.0.0",
-  "description": "URL Shortener SaaS Frontend with TypeScript & React",
+  "description": "Gateway Hub URL Shortener Frontend - TypeScript + React",
   "private": true,
   "dependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-router-dom": "^6.14.0",
+    "react-router-dom": "^6.14.2",
     "axios": "^1.4.0"
   },
   "devDependencies": {
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
+    "@types/node": "^20.0.0",
     "typescript": "^5.1.0",
-    "react-scripts": "5.0.1"
+    "react-scripts": "5.0.1",
+    "@testing-library/react": "^14.0.0",
+    "@testing-library/jest-dom": "^5.16.5"
   },
   "scripts": {
     "start": "react-scripts start",
