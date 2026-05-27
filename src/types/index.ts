@@ -1,86 +1,71 @@
-/**
- * User types
- */
 export interface User {
   id: number;
   email: string;
+  full_name: string | null;
   is_premium: boolean;
+  is_active: boolean;
   created_at: string;
+}
+
+export interface ShortLink {
+  id: number;
+  code: string;
+  target_url: string;
+  title: string | null;
+  description: string | null;
+  click_count: number;
+  is_active: boolean;
+  created_at: string;
+  expires_at: string | null;
+  short_url: string;
 }
 
 export interface UserStats {
   total_links: number;
   total_clicks: number;
   links_this_month: number;
-  plan: 'free' | 'premium';
-}
-
-/**
- * Short Link types
- */
-export interface ShortLink {
-  id: number;
-  user_id: number;
-  code: string;
-  target: string;
-  clicks: number;
-  created_at: string;
-}
-
-export interface CreateLinkRequest {
-  target: string;
-  custom_code?: string;
-}
-
-/**
- * API Response types
- */
-export interface ApiResponse<T> {
-  success: boolean;
-  data?: T;
-  message?: string;
-  error?: string;
+  is_premium: boolean;
+  premium_until: string | null;
+  links_limit: number;
+  links_remaining: number;
 }
 
 export interface AuthResponse {
+  success: boolean;
   user: User;
-  token: string;
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
 }
 
-/**
- * Auth types
- */
-export interface LoginCredentials {
-  email: string;
-  password: string;
+export interface LinkResponse {
+  success: boolean;
+  link: ShortLink;
 }
 
-export interface RegisterCredentials {
-  email: string;
-  password: string;
-  password_confirm?: string;
+export interface ErrorResponse {
+  success: false;
+  error: {
+    code: string;
+    message: string;
+    details?: Record<string, any>;
+  };
 }
 
-/**
- * Context types
- */
-export interface AuthContextType {
+export type AuthContextType = {
   user: User | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  error: string | null;
-  login: (credentials: LoginCredentials) => Promise<void>;
-  register: (credentials: RegisterCredentials) => Promise<void>;
+  token: string | null;
+  loading: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, full_name?: string) => Promise<void>;
   logout: () => void;
-}
+};
 
-export interface LinksContextType {
+export type LinksContextType = {
   links: ShortLink[];
-  isLoading: boolean;
-  error: string | null;
   stats: UserStats | null;
-  fetchLinks: () => Promise<void>;
-  createLink: (data: CreateLinkRequest) => Promise<ShortLink>;
+  loading: boolean;
+  createLink: (targetUrl: string, title?: string, description?: string) => Promise<ShortLink>;
   deleteLink: (code: string) => Promise<void>;
-  upgradeAccount: () => Promise<void>;
-}
+  fetchStats: () => Promise<void>;
+};

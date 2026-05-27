@@ -1,124 +1,101 @@
-import axios, { AxiosInstance, AxiosError } from 'axios';
-import { API_BASE_URL, AUTH_TOKEN_KEY } from '../config';
-import {
-  AuthResponse,
-  LoginCredentials,
-  RegisterCredentials,
-  ShortLink,
-  CreateLinkRequest,
-  ApiResponse,
-  UserStats,
-} from '../types';
+import axios, { AxiosError, AxiosInstance } from 'axios';
+import { AuthResponse, LinkResponse, ErrorResponse } from '../types';
 
-class ApiClient {
-  private client: AxiosInstance;
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
-  constructor() {
-    this.client = axios.create({
-      baseURL: API_BASE_URL,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+export const apiClient: AxiosInstance = axios.create({
+  baseURL: `${API_URL}/api/v1`,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
 
-    // Add auth token to requests
-    this.client.interceptors.request.use((config) => {
-      const token = localStorage.getItem(AUTH_TOKEN_KEY);
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-      return config;
-    });
+// Request interceptor to add token
+apiClient.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
-    // Handle errors
-    this.client.interceptors.response.use(
-      (response) => response,
-      (error: AxiosError) => {
-        if (error.response?.status === 401) {
-          // Clear auth data on 401
-          localStorage.removeItem(AUTH_TOKEN_KEY);
+// Response interceptor for error handling
+apiClient.interceptors.response.use(
+  (response) => response,
+  async (error: AxiosError<ErrorResponse>) => {
+    if (error.response?.status === 401) {
+      // Try to refresh token
+      const refreshToken = localStorage.getItem('refresh_token');
+      if (refreshToken) {
+        try {
+          const response = await axios.post(`${API_URL}/api/v1/auth/refresh`, {
+            refresh_token: refreshToken,
+          });
+          const newAccessToken = response.data.access_token;
+          localStorage.setItem('access_token', newAccessToken);
+
+          // Retry original request
+          return apiClient(error.config!);
+        } catch {
+          // Refresh failed, redirect to login
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('refresh_token');
           window.location.href = '/login';
         }
-        return Promise.reject(error);
       }
-    );
+    }
+    return Promise.reject(error);
   }
+);
 
-  /**
-   * Authentication endpoints
-   */
-  async register(credentials: RegisterCredentials): Promise<AuthResponse> {
-    const response = await this.client.post<ApiResponse<AuthResponse>>(
-      '/auth/register',
-      credentials
-    );
-    return response.data.data!;
-  }
+// Auth endpoints
+export const authAPI = {
+  register: (email: string, password: string, full_name?: string) =>
+    apiClient.post<AuthResponse>('/auth/register', {
+      email,
+      password,
+      full_name,
+    }),
 
-  async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    const response = await this.client.post<ApiResponse<AuthResponse>>(
-      '/auth/login',
-      credentials
-    );
-    return response.data.data!;
-  }
+  login: (email: string, password: string) =>
+    apiClient.post<AuthResponse>('/auth/login', {
+      email,
+      password,
+    }),
 
-  async logout(): Promise<void> {
-    await this.client.post('/auth/logout');
-  }
+  logout: () => apiClient.post('/auth/logout'),
 
-  /**
-   * User endpoints
-   */
-  async getUserStats(): Promise<UserStats> {
-    const response = await this.client.get<ApiResponse<UserStats>>(
-      '/user/stats'
-    );
-    return response.data.data!;
-  }
+  refresh: (refreshToken: string) =>
+    apiClient.post('/auth/refresh', { refresh_token: refreshToken }),
+};
 
-  async upgradeAccount(): Promise<void> {
-    await this.client.post('/user/upgrade');
-  }
+// User endpoints
+export const userAPI = {
+  getMe: () => apiClient.get('/users/me'),
+  getStats: () => apiClient.get('/users/stats'),
+  upgrade: (plan: string) =>
+    apiClient.post('/users/upgrade', { plan }),
+};
 
-  /**
-   * Links endpoints
-   */
-  async getLinks(): Promise<ShortLink[]> {
-    const response = await this.client.get<ApiResponse<ShortLink[]>>(
-      '/links'
-    );
-    return response.data.data || [];
-  }
+// Links endpoints
+export const linksAPI = {
+  getAll: (skip = 0, limit = 50) =>
+    apiClient.get(`/links?skip=${skip}&limit=${limit}`),
 
-  async createLink(data: CreateLinkRequest): Promise<ShortLink> {
-    const response = await this.client.post<ApiResponse<ShortLink>>(
-      '/links/create',
-      data
-    );
-    return response.data.data!;
-  }
+  getOne: (code: string) => apiClient.get(`/links/${code}`),
 
-  async deleteLink(code: string): Promise<void> {
-    await this.client.delete(`/links/${code}`);
-  }
+  create: (targetUrl: string, title?: string, description?: string) =>
+    apiClient.post<LinkResponse>('/links/create', {
+      target_url: targetUrl,
+      title,
+      description,
+    }),
 
-  async getLinkAnalytics(code: string): Promise<ShortLink> {
-    const response = await this.client.get<ApiResponse<ShortLink>>(
-      `/links/${code}/analytics`
-    );
-    return response.data.data!;
-  }
+  delete: (code: string) => apiClient.delete(`/links/${code}`),
 
-  /**
-   * Public redirect endpoint (no auth needed)
-   */
-  async redirectLink(code: string): Promise<{ target: string }> {
-    const response = await this.client.get<{ target: string }>(
-      `/redirect/${code}`
-    );
-    return response.data;
-  }
-}
-
-export const apiClient = new ApiClient();
+  getAnalytics: (code: string, days = 30) =>
+    apiClient.get(`/analytics/${code}?days=${days}`),
+};
