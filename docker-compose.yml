@@ -7,7 +7,7 @@ services:
     environment:
       POSTGRES_DB: ${DB_NAME:-gateway_hub}
       POSTGRES_USER: ${DB_USER:-appuser}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password123}
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -43,23 +43,26 @@ services:
       dockerfile: Dockerfile
     container_name: gateway-hub-backend
     environment:
-      DATABASE_URL: postgresql+asyncpg://${DB_USER:-appuser}:${DB_PASSWORD}@postgres:5432/${DB_NAME:-gateway_hub}
-      REDIS_URL: redis://redis:6379
-      SECRET_KEY: ${SECRET_KEY}
-      DEBUG: "${DEBUG:-false}"
-      ENVIRONMENT: "${ENVIRONMENT:-production}"
-      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,https://app.example.com}
-    ports:
-      - "${BACKEND_PORT:-8000}:8000"
+      APP_ENV: local
+      LOCAL_DEMO_USER_ENABLED: "true"
+      LOCAL_DEMO_USERNAME: "user"
+      LOCAL_DEMO_PASSWORD: "password123"
+      LOCAL_DEMO_EMAIL: "user@example.com"
+
+      DB_USER: ${DB_USER:-appuser}
+      DB_PASSWORD: ${DB_PASSWORD:-password123}
+      DB_NAME: ${DB_NAME:-gateway_hub}
+
+      DATABASE_URL: postgresql+asyncpg://${DB_USER:-appuser}:${DB_PASSWORD:-password123}@postgres:5432/${DB_NAME:-gateway_hub}
+
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-    volumes:
-      - ./app:/app/app
-      - ./logs:/app/logs
-    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+
+    ports:
+      - "8000:8000"
     networks:
       - gateway-network
 
