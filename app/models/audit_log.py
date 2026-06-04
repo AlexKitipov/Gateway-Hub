@@ -1,7 +1,7 @@
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, JSON, String, func
 from sqlalchemy.orm import relationship
 
-from app.database.base import Base
+from app.database import Base
 
 
 class AuditLog(Base):
