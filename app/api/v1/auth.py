@@ -4,7 +4,13 @@ from sqlalchemy.orm import Session
 from app.database.session import get_db
 from app.rate_limit import limiter
 from app.models.user import User
-from app.schemas.user import AuthResponse, UserLoginRequest, UserRegisterRequest, UserResponse
+from app.schemas.user import (
+    AuthResponse,
+    RefreshTokenRequest,
+    UserLoginRequest,
+    UserRegisterRequest,
+    UserResponse,
+)
 from app.security import create_token, hash_password, verify_password
 from app.utils.exceptions import AppException
 
@@ -13,7 +19,9 @@ router = APIRouter()
 
 @router.post("/register", response_model=AuthResponse)
 @limiter.limit("3/minute")
-async def register(request: Request, payload: UserRegisterRequest, db: Session = Depends(get_db)):
+async def register(
+    request: Request, payload: UserRegisterRequest, db: Session = Depends(get_db)
+):
     """Register a new user."""
     existing_user = db.query(User).filter(User.email == payload.email).first()
     if existing_user:
@@ -45,7 +53,9 @@ async def register(request: Request, payload: UserRegisterRequest, db: Session =
 
 @router.post("/login", response_model=AuthResponse)
 @limiter.limit("5/minute")
-async def login(request: Request, payload: UserLoginRequest, db: Session = Depends(get_db)):
+async def login(
+    request: Request, payload: UserLoginRequest, db: Session = Depends(get_db)
+):
     """Login user."""
     user = db.query(User).filter(User.email == payload.email).first()
 
@@ -81,12 +91,14 @@ async def logout():
 
 @router.post("/refresh", response_model=AuthResponse)
 @limiter.limit("10/minute")
-async def refresh_token(request: Request, refresh_token: str, db: Session = Depends(get_db)):
+async def refresh_token(
+    request: Request, payload: RefreshTokenRequest, db: Session = Depends(get_db)
+):
     """Refresh access token using refresh token."""
     from app.security import verify_token
 
-    payload = verify_token(refresh_token, token_type="refresh")
-    user_id = payload.get("sub")
+    payload_data = verify_token(payload.refresh_token, token_type="refresh")
+    user_id = payload_data.get("sub")
 
     user = db.query(User).filter(User.id == user_id).first()
     if not user:

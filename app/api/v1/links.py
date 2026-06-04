@@ -44,14 +44,16 @@ async def get_user_links(
 
     link_responses = []
     for link in links:
-        link_data = LinkResponse.from_orm(link)
+        link_data = LinkResponse.model_validate(link)
         link_data.short_url = f"{settings.SHORT_URL_BASE}/{link.code}"
         link_responses.append(link_data)
 
     return LinkListResponse(total=total, limit=limit, offset=skip, links=link_responses)
 
 
-@router.post("/create", response_model=LinkResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/create", response_model=LinkResponse, status_code=status.HTTP_201_CREATED
+)
 async def create_link(
     request: LinkCreateRequest,
     user_id: int = Depends(get_current_user),
@@ -70,10 +72,14 @@ async def create_link(
         month_start = datetime.utcnow().replace(
             day=1, hour=0, minute=0, second=0, microsecond=0
         )
-        links_this_month = db.query(func.count(Link.id)).filter(
-            Link.user_id == user_id,
-            Link.created_at >= month_start,
-        ).scalar()
+        links_this_month = (
+            db.query(func.count(Link.id))
+            .filter(
+                Link.user_id == user_id,
+                Link.created_at >= month_start,
+            )
+            .scalar()
+        )
 
         if links_this_month >= settings.FREE_TIER_LINKS_PER_MONTH:
             raise AppException(
@@ -113,7 +119,7 @@ async def create_link(
     db.commit()
     db.refresh(link)
 
-    response = LinkResponse.from_orm(link)
+    response = LinkResponse.model_validate(link)
     response.short_url = f"{settings.SHORT_URL_BASE}/{link.code}"
     return response
 
@@ -154,7 +160,7 @@ async def get_link_details(
             error_code="LINK_NOT_FOUND",
         )
 
-    response = LinkResponse.from_orm(link)
+    response = LinkResponse.model_validate(link)
     response.short_url = f"{settings.SHORT_URL_BASE}/{link.code}"
     return response
 
