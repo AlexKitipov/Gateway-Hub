@@ -1,6 +1,7 @@
-from pydantic import BaseModel, HttpUrl, Field
 from datetime import datetime
 from typing import Optional
+
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
 
 class LinkCreate(BaseModel):
@@ -11,6 +12,10 @@ class LinkCreate(BaseModel):
     expires_at: Optional[datetime] = None
 
 
+class LinkCreateRequest(LinkCreate):
+    """Request body for creating a short link."""
+
+
 class LinkUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
@@ -18,6 +23,8 @@ class LinkUpdate(BaseModel):
 
 
 class LinkResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     code: str
     target_url: str
@@ -27,10 +34,12 @@ class LinkResponse(BaseModel):
     is_active: bool
     created_at: datetime
     expires_at: Optional[datetime] = None
-    short_url: str
+    short_url: str = ""
 
-    class Config:
-        from_attributes = True
+
+class LinkDeleteResponse(BaseModel):
+    success: bool
+    message: str
 
 
 class LinkListResponse(BaseModel):
