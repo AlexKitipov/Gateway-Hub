@@ -11,7 +11,7 @@ from app.schemas.user import UserStatsResponse
 from app.security import get_current_user
 from app.utils.exceptions import AppException
 
-router = APIRouter()
+router = APIRouter(prefix="/api/v1/users", tags=["users"])
 
 
 @router.get("/stats", response_model=UserStatsResponse)
@@ -30,16 +30,21 @@ async def get_user_stats(
 
     total_links = db.query(func.count(Link.id)).filter(Link.user_id == user_id).scalar()
     total_clicks = (
-        db.query(func.sum(Link.click_count)).filter(Link.user_id == user_id).scalar() or 0
+        db.query(func.sum(Link.click_count)).filter(Link.user_id == user_id).scalar()
+        or 0
     )
 
     month_start = datetime.utcnow().replace(
         day=1, hour=0, minute=0, second=0, microsecond=0
     )
-    links_this_month = db.query(func.count(Link.id)).filter(
-        Link.user_id == user_id,
-        Link.created_at >= month_start,
-    ).scalar()
+    links_this_month = (
+        db.query(func.count(Link.id))
+        .filter(
+            Link.user_id == user_id,
+            Link.created_at >= month_start,
+        )
+        .scalar()
+    )
 
     return UserStatsResponse(
         total_links=total_links,
