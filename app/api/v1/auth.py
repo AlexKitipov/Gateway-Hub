@@ -14,7 +14,7 @@ from app.schemas.user import (
 from app.security import create_token, hash_password, verify_password
 from app.utils.exceptions import AppException
 
-router = APIRouter()
+router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
 
 @router.post("/register", response_model=AuthResponse)

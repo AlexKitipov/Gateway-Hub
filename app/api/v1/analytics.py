@@ -11,7 +11,7 @@ from app.schemas.analytics import LinkAnalyticsResponse
 from app.security import get_current_user
 from app.utils.exceptions import AppException
 
-router = APIRouter()
+router = APIRouter(prefix="/api/v1/analytics", tags=["analytics"])
 
 
 @router.get("/{code}", response_model=LinkAnalyticsResponse)
@@ -31,10 +31,14 @@ async def get_link_analytics(
         )
 
     since = datetime.utcnow() - timedelta(days=days)
-    analytics = db.query(LinkAnalytics).filter(
-        LinkAnalytics.link_id == link.id,
-        LinkAnalytics.clicked_at >= since,
-    ).all()
+    analytics = (
+        db.query(LinkAnalytics)
+        .filter(
+            LinkAnalytics.link_id == link.id,
+            LinkAnalytics.clicked_at >= since,
+        )
+        .all()
+    )
 
     total_clicks = len(analytics)
     unique_ips = len({a.ip_address for a in analytics if a.ip_address})

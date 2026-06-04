@@ -25,11 +25,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Versioned API routers
 app.include_router(auth.router)
 app.include_router(links.router)
-app.include_router(redirect.router)
 app.include_router(analytics.router)
 app.include_router(users.router)
+
+# Public short-link redirect router
+app.include_router(redirect.router)
 
 
 @app.exception_handler(Exception)

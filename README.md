@@ -110,7 +110,7 @@ You are free to use, modify, and deploy it commercially.
 
 ## 5. REST API Specification
 
-All endpoints are versioned under `/api/v1`.
+All authenticated and management API endpoints are versioned under `/api/v1`. Public short-link redirects are served separately at `/r/{code}` so they stay short and do not collide with the links API.
 
 ### 5.1 Authentication Endpoints
 
@@ -180,13 +180,13 @@ Response `200`:
 
 | Method | Endpoint | Auth | Rate Limit | Description |
 |---|---|---|---|---|
-| GET | `/api/v1/user/stats` | ✅ | 100/min | Get user stats |
-| POST | `/api/v1/user/upgrade` | ✅ | 1/min | Upgrade to premium |
+| GET | `/api/v1/users/stats` | ✅ | 100/min | Get user stats |
+| POST | `/api/v1/users/upgrade` | ✅ | 1/min | Upgrade to premium |
 
 **Get Stats**
 
 ```http
-GET /api/v1/user/stats
+GET /api/v1/users/stats
 Authorization: Bearer <token>
 ```
 
@@ -205,7 +205,7 @@ Response `200`:
 **Upgrade**
 
 ```http
-POST /api/v1/user/upgrade
+POST /api/v1/users/upgrade
 Authorization: Bearer <token>
 ```
 
@@ -227,7 +227,6 @@ Response `200`:
 | POST | `/api/v1/links/create` | ✅ | 30/min | Create new link |
 | DELETE | `/api/v1/links/{code}` | ✅ | 100/min | Delete link |
 | GET | `/api/v1/links/{code}` | ✅ | 100/min | Get link details |
-| GET | `/api/v1/links/r/{code}` | ❌ | 1000/min | Redirect (public) |
 
 **Create Link**
 
@@ -308,7 +307,7 @@ Response `200`:
 **Public Redirect**
 
 ```http
-GET /api/v1/links/r/abc123
+GET /r/abc123
 ```
 
 Response: `301 Moved Permanently`
@@ -317,7 +316,15 @@ Response: `301 Moved Permanently`
 Location: https://example.com/very-long-url
 ```
 
-### 5.4 Analytics Endpoints
+### 5.4 Public Redirect Endpoint
+
+Public redirects are intentionally outside the `/api/v1` management API and are handled by the dedicated redirect router.
+
+| Method | Endpoint | Auth | Rate Limit | Description |
+|---|---|---|---|---|
+| GET | `/r/{code}` | ❌ | 1000/min | Redirect to the target URL and record click analytics |
+
+### 5.5 Analytics Endpoints
 
 | Method | Endpoint | Auth | Rate Limit | Description |
 |---|---|---|---|---|
@@ -344,7 +351,7 @@ Response `200`:
 }
 ```
 
-### 5.5 Error Response Format
+### 5.6 Error Response Format
 
 All errors use:
 
@@ -527,7 +534,7 @@ server {
 
     # Public redirect endpoint (short URLs)
     location ~ ^/r/[a-zA-Z0-9_-]+$ {
-        proxy_pass http://gateway_hub_backend/api/v1/links$request_uri;
+        proxy_pass http://gateway_hub_backend;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
