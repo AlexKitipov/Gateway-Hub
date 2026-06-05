@@ -76,7 +76,9 @@ The service will be available at:
 Код
 http://127.0.0.1:8000
 🔐 Security Notes
-Replace the default dev-secret-key with a secure key in production.
+Replace the default dev-secret-key with a secure key in production. The application refuses to start when `ENVIRONMENT=production` and `SECRET_KEY` is blank or still set to a placeholder value.
+
+Configure short-link generation with `SHORT_CODE_LENGTH`, `SHORT_CODE_ALPHABET`, and `SHORT_URL_BASE` (for example, `https://yourdomain.com/r`). `ALLOWED_ORIGINS` accepts a comma-separated list such as `https://app.example.com,https://admin.example.com`.
 
 Always run behind HTTPS.
 
