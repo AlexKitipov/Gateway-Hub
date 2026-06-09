@@ -25,15 +25,19 @@ def _override_upgrade_dependencies(user: User, db: FakeDb):
     def override_get_db():
         return db
 
-    app.dependency_overrides[users.get_current_user] = override_get_current_user
-    app.dependency_overrides[users.get_db] = override_get_db
+    overrides = app.dependency_overrides
+    overrides[users.get_current_user] = override_get_current_user
+    overrides[users.get_db] = override_get_db
 
 
 def test_mock_upgrade_is_blocked_in_production(monkeypatch):
     monkeypatch.setattr(settings, "ENVIRONMENT", "production")
     monkeypatch.setattr(settings, "ENABLE_MOCK_BILLING", False)
     user = User(
-        id=1, email="user@example.com", password_hash="hash", is_premium=False
+        id=1,
+        email="user@example.com",
+        password_hash="hash",
+        is_premium=False,
     )
     db = FakeDb()
     _override_upgrade_dependencies(user, db)
@@ -45,21 +49,29 @@ def test_mock_upgrade_is_blocked_in_production(monkeypatch):
 
     assert response.status_code == 403
     assert response.json() == {
-        "detail": (
-            "Mock premium upgrades are disabled in production. "
-            "Configure Stripe billing or set ENABLE_MOCK_BILLING=true only "
-            "for controlled demos."
-        )
+        "success": False,
+        "error": {
+            "code": "MOCK_BILLING_DISABLED",
+            "message": (
+                "Mock premium upgrades are disabled in production. "
+                "Configure Stripe billing or set "
+                "ENABLE_MOCK_BILLING=true only "
+                "for controlled demos."
+            ),
+        },
     }
     assert user.is_premium is False
     assert db.committed is False
 
 
-def test_mock_upgrade_can_be_enabled_for_controlled_production_demo(monkeypatch):
+def test_mock_upgrade_can_be_enabled_in_production_demo(monkeypatch):
     monkeypatch.setattr(settings, "ENVIRONMENT", "production")
     monkeypatch.setattr(settings, "ENABLE_MOCK_BILLING", True)
     user = User(
-        id=1, email="user@example.com", password_hash="hash", is_premium=False
+        id=1,
+        email="user@example.com",
+        password_hash="hash",
+        is_premium=False,
     )
     db = FakeDb()
     _override_upgrade_dependencies(user, db)

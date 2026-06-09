@@ -115,9 +115,13 @@ def test_redirect_blocks_free_click_limit_without_tracking(monkeypatch):
         app.dependency_overrides.clear()
 
     assert response.status_code == 403
-    assert response.json()["detail"] == (
-        "Click limit exceeded for this free link"
-    )
+    assert response.json() == {
+        "success": False,
+        "error": {
+            "code": "CLICK_LIMIT_EXCEEDED",
+            "message": "Click limit exceeded for this free link",
+        },
+    }
     assert link.click_count == 1
     assert db.added == []
     assert db.committed is False
@@ -134,7 +138,10 @@ def test_redirect_inactive_link_returns_not_found_without_tracking():
         app.dependency_overrides.clear()
 
     assert response.status_code == 404
-    assert response.json()["detail"] == "Link not found"
+    assert response.json() == {
+        "success": False,
+        "error": {"code": "LINK_NOT_FOUND", "message": "Link not found"},
+    }
     assert link.click_count == 0
     assert db.added == []
     assert db.committed is False
@@ -151,7 +158,10 @@ def test_redirect_expired_link_returns_gone_without_tracking():
         app.dependency_overrides.clear()
 
     assert response.status_code == 410
-    assert response.json()["detail"] == "Link has expired"
+    assert response.json() == {
+        "success": False,
+        "error": {"code": "LINK_EXPIRED", "message": "Link has expired"},
+    }
     assert link.click_count == 0
     assert db.added == []
     assert db.committed is False
