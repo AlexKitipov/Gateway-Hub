@@ -6,10 +6,10 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.database.session import get_db
+from app.dependencies import get_current_user
 from app.models.link import Link
 from app.models.user import User
 from app.schemas.user import UserStatsResponse
-from app.dependencies import get_current_user
 from app.utils.exceptions import AppException
 
 router = APIRouter(prefix="/api/v1/users", tags=["users"])

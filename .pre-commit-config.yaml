@@ -1,0 +1,38 @@
+default_language_version:
+  python: python3.12
+
+repos:
+  - repo: https://github.com/psf/black
+    rev: 23.12.0
+    hooks:
+      - id: black
+        args: ["--config=pyproject.toml"]
+
+  - repo: https://github.com/PyCQA/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        args: ["--settings-path=pyproject.toml"]
+
+  - repo: https://github.com/PyCQA/flake8
+    rev: 6.1.0
+    hooks:
+      - id: flake8
+        args:
+          - "--max-line-length=88"
+          - "--extend-ignore=E203,W503"
+          - "--exclude=.git,__pycache__,.mypy_cache,.pytest_cache,.venv,build,dist,node_modules"
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.7.1
+    hooks:
+      - id: mypy
+        args: ["--config-file=pyproject.toml"]
+        pass_filenames: false
+        additional_dependencies:
+          - pydantic==2.5.0
+          - pydantic-settings==2.1.0
+          - sqlalchemy==2.0.23
+          - fastapi==0.104.1
+          - python-jose[cryptography]==3.3.0
+          - passlib[bcrypt]==1.7.4

@@ -7,6 +7,41 @@ on:
   pull_request:
 
 jobs:
+  lint:
+    name: Python lint and type checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Check formatting with Black
+        run: python -m black --check app tests migrations
+
+      - name: Check import ordering with isort
+        run: python -m isort --check-only app tests migrations
+
+      - name: Run Flake8
+        run: >
+          python -m flake8 app tests migrations
+          --max-line-length=88
+          --extend-ignore=E203,W503
+          --exclude=.git,__pycache__,.mypy_cache,.pytest_cache,.venv,build,dist,node_modules
+
+      - name: Run mypy
+        run: python -m mypy --config-file pyproject.toml
+
   backend:
     name: Backend tests
     runs-on: ubuntu-latest
