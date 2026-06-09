@@ -1,15 +1,17 @@
+from datetime import datetime
+
 from sqlalchemy import (
+    BigInteger,
+    Boolean,
     Column,
+    DateTime,
+    ForeignKey,
     Integer,
     String,
     Text,
-    Boolean,
-    DateTime,
-    ForeignKey,
-    BigInteger,
 )
 from sqlalchemy.orm import relationship
-from datetime import datetime
+
 from app.database.base import Base
 
 
@@ -29,9 +31,7 @@ class Link(Base):
     description = Column(Text)
     click_count = Column(BigInteger, default=0, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False, index=True)
-    created_at = Column(
-        DateTime, default=datetime.utcnow, nullable=False, index=True
-    )
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
     updated_at = Column(
         DateTime,
         default=datetime.utcnow,

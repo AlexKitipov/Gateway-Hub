@@ -5,11 +5,11 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
+from app.dependencies import get_current_user
 from app.models.analytics import LinkAnalytics
 from app.models.link import Link
-from app.schemas.analytics import LinkAnalyticsResponse
-from app.dependencies import get_current_user
 from app.models.user import User
+from app.schemas.analytics import LinkAnalyticsResponse
 from app.utils.exceptions import AppException
 
 router = APIRouter(prefix="/api/v1/analytics", tags=["analytics"])

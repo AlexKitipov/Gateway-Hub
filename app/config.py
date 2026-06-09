@@ -9,7 +9,6 @@ from pydantic_settings import (
     PydanticBaseSettingsSource,
 )
 
-
 _PLACEHOLDER_SECRET_KEYS = {
     "your-secret-key-change-in-production",
     "your-super-secret-key-change-in-production",

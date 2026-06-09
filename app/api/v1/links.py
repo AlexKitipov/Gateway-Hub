@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.database.session import get_db
+from app.dependencies import get_current_user
 from app.models.link import Link
 from app.models.user import User
 from app.schemas.link import (
@@ -14,7 +15,6 @@ from app.schemas.link import (
     LinkListResponse,
     LinkResponse,
 )
-from app.dependencies import get_current_user
 from app.utils.exceptions import AppException
 from app.utils.short_code import generate_short_code, validate_custom_code
 
@@ -30,9 +30,7 @@ def get_user_links(
 ):
     """Get all links for current user."""
     total = (
-        db.query(func.count(Link.id))
-        .filter(Link.user_id == current_user.id)
-        .scalar()
+        db.query(func.count(Link.id)).filter(Link.user_id == current_user.id).scalar()
     )
 
     links = (
@@ -50,9 +48,7 @@ def get_user_links(
         link_data.short_url = f"{settings.SHORT_URL_BASE}/{link.code}"
         link_responses.append(link_data)
 
-    return LinkListResponse(
-        total=total, limit=limit, offset=skip, links=link_responses
-    )
+    return LinkListResponse(total=total, limit=limit, offset=skip, links=link_responses)
 
 
 @router.post(
@@ -95,11 +91,7 @@ def create_link(
                 error_code="INVALID_CODE",
             )
 
-        existing = (
-            db.query(Link)
-            .filter(Link.code == request.custom_code)
-            .first()
-        )
+        existing = db.query(Link).filter(Link.code == request.custom_code).first()
         if existing:
             raise AppException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -150,9 +142,7 @@ def delete_link(
     link.is_active = False
     db.commit()
 
-    return LinkDeleteResponse(
-        success=True, message="Link deleted successfully"
-    )
+    return LinkDeleteResponse(success=True, message="Link deleted successfully")
 
 
 @router.get("/{code}", response_model=LinkResponse)

@@ -1,0 +1,42 @@
+[tool.black]
+line-length = 88
+target-version = ["py310"]
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.git
+  | \.mypy_cache
+  | \.pytest_cache
+  | \.venv
+  | build
+  | dist
+  | node_modules
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 88
+py_version = 310
+skip = ["node_modules", ".venv", "build", "dist"]
+
+[tool.mypy]
+python_version = "3.10"
+files = ["app"]
+plugins = ["pydantic.mypy"]
+ignore_missing_imports = true
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+check_untyped_defs = true
+disable_error_code = ["assignment", "arg-type"]
+exclude = [
+  "^node_modules/",
+  "^migrations/",
+]
+
+[[tool.mypy.overrides]]
+module = [
+  "app.analytics_endpoint_example",
+]
+ignore_errors = true
