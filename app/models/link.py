@@ -18,7 +18,10 @@ class Link(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(
-        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+        Integer,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     code = Column(String(20), unique=True, nullable=False, index=True)
     target_url = Column(Text, nullable=False)
@@ -26,11 +29,16 @@ class Link(Base):
     description = Column(Text)
     click_count = Column(BigInteger, default=0, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False, index=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
-    updated_at = Column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    created_at = Column(
+        DateTime, default=datetime.utcnow, nullable=False, index=True
     )
-    expires_at = Column(DateTime, nullable=True)
+    updated_at = Column(
+        DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False,
+    )
+    expires_at = Column(DateTime, nullable=True, index=True)
     custom_domain = Column(String(255), nullable=True)
 
     # Relationships

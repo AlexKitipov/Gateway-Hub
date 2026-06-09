@@ -30,7 +30,9 @@ def get_user_links(
 ):
     """Get all links for current user."""
     total = (
-        db.query(func.count(Link.id)).filter(Link.user_id == current_user.id).scalar()
+        db.query(func.count(Link.id))
+        .filter(Link.user_id == current_user.id)
+        .scalar()
     )
 
     links = (
@@ -48,7 +50,9 @@ def get_user_links(
         link_data.short_url = f"{settings.SHORT_URL_BASE}/{link.code}"
         link_responses.append(link_data)
 
-    return LinkListResponse(total=total, limit=limit, offset=skip, links=link_responses)
+    return LinkListResponse(
+        total=total, limit=limit, offset=skip, links=link_responses
+    )
 
 
 @router.post(
@@ -76,7 +80,10 @@ def create_link(
         if links_this_month >= settings.FREE_TIER_LINKS_PER_MONTH:
             raise AppException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Free tier limit reached ({settings.FREE_TIER_LINKS_PER_MONTH} links/month)",
+                detail=(
+                    "Free tier limit reached "
+                    f"({settings.FREE_TIER_LINKS_PER_MONTH} links/month)"
+                ),
                 error_code="LIMIT_EXCEEDED",
             )
 
@@ -88,7 +95,11 @@ def create_link(
                 error_code="INVALID_CODE",
             )
 
-        existing = db.query(Link).filter(Link.code == request.custom_code).first()
+        existing = (
+            db.query(Link)
+            .filter(Link.code == request.custom_code)
+            .first()
+        )
         if existing:
             raise AppException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -105,6 +116,7 @@ def create_link(
         target_url=str(request.target_url),
         title=request.title,
         description=request.description,
+        expires_at=request.expires_at,
         created_at=datetime.utcnow(),
     )
     db.add(link)
@@ -138,7 +150,9 @@ def delete_link(
     link.is_active = False
     db.commit()
 
-    return LinkDeleteResponse(success=True, message="Link deleted successfully")
+    return LinkDeleteResponse(
+        success=True, message="Link deleted successfully"
+    )
 
 
 @router.get("/{code}", response_model=LinkResponse)
