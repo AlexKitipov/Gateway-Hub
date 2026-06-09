@@ -3,9 +3,9 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
+import app.models  # noqa: F401 - ensure model metadata is registered
 from app.config import settings
 from app.database.base import Base
-from app.models import AuditLog, Link, LinkAnalytics, Subscription, User  # noqa: F401
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
@@ -38,7 +38,9 @@ def run_migrations_online() -> None:
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata, compare_type=True
+            connection=connection,
+            target_metadata=target_metadata,
+            compare_type=True,
         )
 
         with context.begin_transaction():

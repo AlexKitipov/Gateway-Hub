@@ -30,6 +30,10 @@ class RefreshTokenRequest(BaseModel):
     refresh_token: str
 
 
+class LogoutRequest(BaseModel):
+    refresh_token: str
+
+
 class UserUpdate(BaseModel):
     full_name: Optional[str] = None
     email: Optional[EmailStr] = None

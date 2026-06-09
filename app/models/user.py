@@ -1,6 +1,8 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime
-from sqlalchemy.orm import relationship
 from datetime import datetime
+
+from sqlalchemy import Boolean, Column, DateTime, Integer, String
+from sqlalchemy.orm import relationship
+
 from app.database.base import Base
 
 
@@ -18,12 +20,23 @@ class User(Base):
     email_verification_token = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+        DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False,
     )
 
     # Relationships
     links = relationship("Link", back_populates="user", cascade="all, delete-orphan")
     subscription = relationship("Subscription", back_populates="user", uselist=False)
+    refresh_tokens = relationship(
+        "RefreshToken",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
 
     def __repr__(self):
-        return f"<User(id={self.id}, email={self.email}, is_premium={self.is_premium})>"
+        return (
+            f"<User(id={self.id}, email={self.email}, "
+            f"is_premium={self.is_premium})>"
+        )
