@@ -569,125 +569,83 @@ sudo apt install certbot python3-certbot-nginx
 sudo certbot certonly --nginx -d api.yourdomain.com
 ```
 
-### 8.4 Docker Setup (Optional but Recommended)
+### 8.4 Docker Compose Full-Stack Setup
 
-```dockerfile
-# Dockerfile
-FROM python:3.11-slim
+Docker Compose can run the complete local stack: FastAPI backend, React frontend, PostgreSQL, Redis, and an optional Nginx reverse proxy.
 
-WORKDIR /app
+**Services included:**
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y postgresql-client && rm -rf /var/lib/apt/lists/*
+- `postgres` — PostgreSQL 15 database used by the backend.
+- `redis` — Redis 7 cache/rate-limit store used by the backend.
+- `migrate` — one-shot Alembic migration job that runs before the backend starts.
+- `backend` — FastAPI API served by Uvicorn on `http://localhost:8000` by default.
+- `frontend` — production React static build served by Nginx on `http://localhost:3000` by default.
+- `nginx` — optional reverse proxy profile on `http://localhost:8080` that routes `/api/` and `/r/` to the backend and all other requests to the frontend.
 
-# Copy requirements
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy application
-COPY app/ ./app/
-COPY migrations/ ./migrations/
-COPY alembic.ini .
-COPY scripts/ ./scripts/
-
-# Create non-root user
-RUN useradd -m appuser && chown -R appuser:appuser /app
-USER appuser
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import httpx; httpx.get('http://localhost:8000/health')"
-
-# Run migrations as an explicit deployment step before starting this command:
-#   /app/scripts/migrate.sh
-# Run application
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
-```
-
-```yaml
-# docker-compose.yml
-version: '3.9'
-
-services:
-  db:
-    image: postgres:15-alpine
-    container_name: gateway-hub-db
-    environment:
-      POSTGRES_DB: gateway_hub
-      POSTGRES_USER: appuser
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U appuser"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  redis:
-    image: redis:7-alpine
-    container_name: gateway-hub-redis
-    ports:
-      - "6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  migrate:
-    build: .
-    container_name: gateway-hub-migrate
-    environment:
-      DATABASE_URL: postgresql://appuser:${DB_PASSWORD}@db:5432/gateway_hub
-    depends_on:
-      db:
-        condition: service_healthy
-    command: ["/app/scripts/migrate.sh"]
-    profiles:
-      - migrations
-
-  backend:
-    build: .
-    container_name: gateway-hub-backend
-    environment:
-      DATABASE_URL: postgresql://appuser:${DB_PASSWORD}@db:5432/gateway_hub
-      REDIS_URL: redis://redis:6379
-      SECRET_KEY: ${SECRET_KEY}
-      DEBUG: "false"
-    ports:
-      - "8000:8000"
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    volumes:
-      - ./app:/app/app
-      - ./logs:/app/logs
-
-volumes:
-  postgres_data:
-
-networks:
-  default:
-    name: gateway-hub-network
-```
-
-**Run with Docker:**
+**Prepare environment variables:**
 
 ```bash
-# Start dependencies first
-docker-compose up -d db redis
+cp .env.example .env
+```
 
-# Apply schema migrations explicitly
-docker-compose run --rm migrate
+The backend uses synchronous SQLAlchemy/psycopg2, so Compose uses a sync PostgreSQL URL:
 
-# Start the API after migrations have completed
-docker-compose up -d backend
-docker-compose logs -f backend
+```env
+DATABASE_URL=postgresql://appuser:password123@postgres:5432/gateway_hub
+REDIS_URL=redis://redis:6379
+REACT_APP_API_URL=http://localhost:8000
+```
+
+**Start the default local stack:**
+
+```bash
+docker compose up --build
+```
+
+The `migrate` job runs `alembic upgrade head` automatically after PostgreSQL is healthy. The backend waits for that job to complete successfully before it starts, so a normal `docker compose up` creates a coherent application stack without a separate migration command.
+
+**Open the application:**
+
+- Frontend: `http://localhost:3000`
+- Backend health check: `http://localhost:8000/health`
+- API base path: `http://localhost:8000/api/v1`
+
+**Run with the optional Nginx reverse proxy:**
+
+```bash
+docker compose --profile proxy up --build
+```
+
+When the `proxy` profile is enabled, open `http://localhost:8080`. Nginx serves the frontend and proxies API calls to the backend from the same origin.
+
+**Database and Redis ports:**
+
+PostgreSQL and Redis are intentionally not published to the host by default. They are reachable by other Compose services on the internal Docker network as `postgres:5432` and `redis:6379`, which avoids exposing database/cache ports in production-like runs. If you need host access for a local database client, add a temporary `docker-compose.override.yml` such as:
+
+```yaml
+services:
+  postgres:
+    ports:
+      - "5432:5432"
+  redis:
+    ports:
+      - "6379:6379"
+```
+
+**Useful commands:**
+
+```bash
+# Re-run migrations manually if needed
+docker compose run --rm migrate
+
+# Follow backend logs
+docker compose logs -f backend
+
+# Stop and remove containers, keeping named volumes
+docker compose down
+
+# Stop and remove containers plus database/cache volumes
+docker compose down -v
 ```
 
 ### 8.5 CI/CD Pipeline (GitHub Actions)
