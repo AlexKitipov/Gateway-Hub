@@ -1,4 +1,4 @@
-import './variables.css';
+@import './variables.css';
 
 * {
   margin: 0;
@@ -25,10 +25,10 @@ a {
   color: var(--primary);
   text-decoration: none;
   transition: color 0.2s ease;
+}
 
-  &:hover {
-    color: var(--primary-dark);
-  }
+a:hover {
+  color: var(--primary-dark);
 }
 
 button {
@@ -54,8 +54,8 @@ select {
 ::-webkit-scrollbar-thumb {
   background: var(--border);
   border-radius: 4px;
+}
 
-  &:hover {
-    background: var(--text-secondary);
-  }
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
 }
