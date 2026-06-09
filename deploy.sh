@@ -34,37 +34,42 @@ sudo -u appuser venv/bin/pip install -r requirements.txt
 # 6. Setup database
 echo "🗄️  Setting up PostgreSQL..."
 sudo -u postgres createdb gateway_hub || true
-sudo -u appuser venv/bin/alembic upgrade head
 
-# 7. Create .env file
+# 7. Create .env file before migrations so Alembic uses production settings
 echo "⚙️  Creating environment configuration..."
-sudo -u appuser cp .env.example .env
+if [ ! -f .env ]; then
+    sudo -u appuser cp .env.example .env
+fi
 echo "⚠️  Please edit /home/appuser/backend/.env with production values"
 read -p "Press Enter after updating .env..."
 
-# 8. Setup systemd service
+# 8. Run migrations explicitly before starting the application
+echo "🧬 Running database migrations..."
+sudo -u appuser ./scripts/migrate.sh
+
+# 9. Setup systemd service
 echo "🔧 Setting up systemd service..."
 sudo cp gateway-hub.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable gateway-hub
 
-# 9. Setup Nginx
+# 10. Setup Nginx
 echo "🌐 Configuring Nginx..."
 sudo cp nginx/gateway-hub.conf /etc/nginx/sites-available/gateway-hub
 sudo ln -sf /etc/nginx/sites-available/gateway-hub /etc/nginx/sites-enabled/
 sudo nginx -t && sudo systemctl restart nginx
 
-# 10. Setup SSL with Let's Encrypt
+# 11. Setup SSL with Let's Encrypt
 echo "🔒 Setting up SSL certificates..."
 read -p "Enter your domain for SSL (e.g., api.example.com): " domain
 sudo certbot certonly --nginx -d $domain
 
-# 11. Start services
+# 12. Start services
 echo "▶️  Starting services..."
 sudo systemctl start gateway-hub
 sudo systemctl start redis-server
 
-# 12. Verify
+# 13. Verify
 echo "✅ Checking service status..."
 sudo systemctl status gateway-hub
 sudo systemctl status nginx

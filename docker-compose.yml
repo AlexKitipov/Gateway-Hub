@@ -37,6 +37,25 @@ services:
     networks:
       - gateway-network
 
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gateway-hub-migrate
+    environment:
+      DB_USER: ${DB_USER:-appuser}
+      DB_PASSWORD: ${DB_PASSWORD:-password123}
+      DB_NAME: ${DB_NAME:-gateway_hub}
+      DATABASE_URL: postgresql://${DB_USER:-appuser}:${DB_PASSWORD:-password123}@postgres:5432/${DB_NAME:-gateway_hub}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["/app/scripts/migrate.sh"]
+    profiles:
+      - migrations
+    networks:
+      - gateway-network
+
   backend:
     build:
       context: .
