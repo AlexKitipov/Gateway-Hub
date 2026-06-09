@@ -5,6 +5,7 @@ from pydantic import ValidationError
 
 from app.schemas.user import (
     AuthResponse,
+    LogoutRequest,
     RefreshTokenRequest,
     UserLoginRequest,
     UserRegisterRequest,
@@ -42,6 +43,12 @@ def test_user_login_request_requires_valid_email():
 
 def test_refresh_token_request_requires_token_value():
     payload = RefreshTokenRequest(refresh_token="refresh-token")
+
+    assert payload.refresh_token == "refresh-token"
+
+
+def test_logout_request_requires_token_value():
+    payload = LogoutRequest(refresh_token="refresh-token")
 
     assert payload.refresh_token == "refresh-token"
 
