@@ -28,25 +28,29 @@ Priority usage limits
 
 Note: Payment flow is mocked for demonstration. The mock upgrade endpoint is disabled when `ENVIRONMENT=production` unless `ENABLE_MOCK_BILLING=true` is explicitly set for a controlled demo. In production, integrate Stripe, PayPal, or another billing provider.
 
-🏗️ Tech Stack
+🏗️ Active Tech Stack
 Python 3.10+
 
-FastAPI (web framework)
+FastAPI backend (`app.main:app`)
 
-PostgreSQL (primary database)
+SQLAlchemy + Alembic migrations
 
-Werkzeug (password hashing)
+PostgreSQL primary database
 
-REST API + React frontend
+Werkzeug password hashing
 
-📁 Project Structure
+React + TypeScript frontend
+
+📁 Active Project Structure
 Код
 Gateway-Hub/
 │
-├── app/                 # FastAPI backend
+├── app/                 # FastAPI backend package (`app.main:app`)
 ├── src/                 # React/TypeScript frontend
-├── migrations/          # Alembic migrations
-├── requirements.txt     # Python dependencies
+├── migrations/          # Alembic migrations for PostgreSQL
+├── docker/              # Frontend Nginx container config
+├── nginx/               # Production reverse proxy config
+├── requirements.txt     # Backend dependencies
 ├── package.json         # Frontend dependencies
 └── README.md            # Project documentation
 📦 Installation
@@ -68,12 +72,16 @@ alembic upgrade head
 This creates the required PostgreSQL schema. The application does not create or update tables at runtime; run Alembic migrations before starting or restarting the API in every deployment.
 
 ▶️ Running the Application
+Start the FastAPI backend:
+
 bash
 uvicorn app.main:app --reload
-The service will be available at:
+The API will be available at:
 
 Код
 http://127.0.0.1:8000
+
+Start the React frontend separately with the package scripts in `package.json` when you need the browser UI.
 🔐 Security Notes
 Replace the default dev-secret-key with a secure key in production. The application refuses to start when `ENVIRONMENT=production` and `SECRET_KEY` is blank or still set to a placeholder value.
 
