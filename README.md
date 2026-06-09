@@ -399,41 +399,39 @@ All errors use:
 - Storage: 50GB SSD
 - Cost: $6-12/month
 
-**Initial Setup:**
+**Initial Setup (non-interactive):**
+
+The repository includes `deploy.sh`, which is designed to be rerunnable and suitable for automation. It installs packages, creates the application user if needed, clones or fast-forwards the repository, creates or preserves the production environment file, runs Alembic migrations after that environment is available, installs systemd/Nginx, and restarts services.
 
 ```bash
-#!/bin/bash
-# Update system
-sudo apt update && sudo apt upgrade -y
-
-# Install dependencies
-sudo apt install -y python3-pip python3-venv postgresql postgresql-contrib nginx git
-
-# Create app user
-sudo useradd -m -s /bin/bash appuser
-sudo su - appuser
-
-# Clone repository
-git clone https://github.com/AlexKitipov/Gateway-Hub backend
-cd backend
-
-# Create virtual environment
-python3 -m venv venv
-source venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Setup database
-createdb gateway_hub
-
-# Create .env file before migrations
-cp .env.example .env
-# Edit .env with production values
-
-# Run schema migrations explicitly before starting the service
-./scripts/migrate.sh
+# Run on the VPS as root, or via sudo from an administrator account.
+sudo APP_USER=appuser \
+  APP_DIR=/home/appuser/backend \
+  REPO_URL=https://github.com/AlexKitipov/Gateway-Hub.git \
+  REPO_BRANCH=main \
+  ./deploy.sh
 ```
+
+Optional settings:
+
+- `RUN_APT_UPGRADE=true` also applies package upgrades; by default the script only updates package metadata and installs missing dependencies.
+- `ENABLE_SSL=true DOMAIN=api.example.com CERTBOT_EMAIL=admin@example.com` requests a Let's Encrypt certificate without prompts.
+- `ENV_FILE=/etc/gateway-hub/gateway-hub.env` overrides the systemd environment file location.
+
+The first run creates `/etc/gateway-hub/gateway-hub.env` with mode `0640`, owner `root`, and group `appuser`. It generates a unique `SECRET_KEY` instead of committing or hardcoding one. Review the file before exposing the service, especially `ALLOWED_ORIGINS` and any provider credentials.
+
+Example environment file:
+
+```dotenv
+DATABASE_URL=postgresql:///gateway_hub
+SECRET_KEY=<generated-or-secret-manager-value>
+DEBUG=false
+ENVIRONMENT=production
+ALLOWED_ORIGINS=https://app.example.com
+REDIS_URL=redis://localhost:6379
+```
+
+Migrations must run with the same environment as the service. `deploy.sh` sources `/etc/gateway-hub/gateway-hub.env` before running `./scripts/migrate.sh`, so schema changes are applied to the configured production database before the API is restarted.
 
 ### 8.2 Systemd Service File
 
@@ -441,13 +439,14 @@ cp .env.example .env
 # /etc/systemd/system/gateway-hub.service
 [Unit]
 Description=Gateway Hub API Server
-After=network.target postgresql.service
+After=network.target postgresql.service redis.service
 
 [Service]
-Type=notify
+Type=simple
 User=appuser
 WorkingDirectory=/home/appuser/backend
-Environment="PATH=/home/appuser/backend/venv/bin"
+Environment="PATH=/home/appuser/backend/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+EnvironmentFile=/etc/gateway-hub/gateway-hub.env
 ExecStart=/home/appuser/backend/venv/bin/uvicorn app.main:app \
     --host 0.0.0.0 \
     --port 8000 \
@@ -463,6 +462,8 @@ StandardError=journal
 [Install]
 WantedBy=multi-user.target
 ```
+
+`Type=simple` matches the direct `uvicorn` process above. Use `Type=notify` only if you add a notify-capable wrapper that sends systemd readiness notifications.
 
 **Commands:**
 

@@ -3,13 +3,11 @@ Description=Gateway Hub API Server
 After=network.target postgresql.service redis.service
 
 [Service]
-Type=notify
+Type=simple
 User=appuser
 WorkingDirectory=/home/appuser/backend
-Environment="PATH=/home/appuser/backend/venv/bin"
-Environment="DATABASE_URL=postgresql://appuser:password@localhost/gateway_hub"
-Environment="SECRET_KEY=your-secret-key"
-Environment="DEBUG=false"
+Environment="PATH=/home/appuser/backend/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+EnvironmentFile=/etc/gateway-hub/gateway-hub.env
 
 ExecStart=/home/appuser/backend/venv/bin/uvicorn app.main:app \
     --host 0.0.0.0 \
