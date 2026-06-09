@@ -11,7 +11,13 @@ from app.schemas.user import (
     UserRegisterRequest,
     UserResponse,
 )
-from app.security import create_token, hash_password, verify_password
+from app.security import (
+    create_token,
+    hash_password,
+    token_subject_as_user_id,
+    verify_password,
+    verify_token,
+)
 from app.utils.exceptions import AppException
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
@@ -93,17 +99,15 @@ def refresh_token(
     request: Request, payload: RefreshTokenRequest, db: Session = Depends(get_db)
 ):
     """Refresh access token using refresh token."""
-    from app.security import verify_token
-
     payload_data = verify_token(payload.refresh_token, token_type="refresh")
-    user_id = payload_data.get("sub")
+    user_id = token_subject_as_user_id(payload_data)
 
     user = db.query(User).filter(User.id == user_id).first()
-    if not user:
+    if not user or not user.is_active:
         raise AppException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found",
-            error_code="USER_NOT_FOUND",
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or inactive user",
+            error_code="INVALID_OR_INACTIVE_USER",
         )
 
     access_token = create_token({"sub": user.id}, token_type="access")

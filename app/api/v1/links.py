@@ -14,7 +14,7 @@ from app.schemas.link import (
     LinkListResponse,
     LinkResponse,
 )
-from app.security import get_current_user
+from app.dependencies import get_current_user
 from app.utils.exceptions import AppException
 from app.utils.short_code import generate_short_code, validate_custom_code
 
@@ -23,17 +23,19 @@ router = APIRouter(prefix="/api/v1/links", tags=["links"])
 
 @router.get("/", response_model=LinkListResponse)
 def get_user_links(
-    user_id: int = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
 ):
     """Get all links for current user."""
-    total = db.query(func.count(Link.id)).filter(Link.user_id == user_id).scalar()
+    total = (
+        db.query(func.count(Link.id)).filter(Link.user_id == current_user.id).scalar()
+    )
 
     links = (
         db.query(Link)
-        .filter(Link.user_id == user_id, Link.is_active.is_(True))
+        .filter(Link.user_id == current_user.id, Link.is_active.is_(True))
         .order_by(Link.created_at.desc())
         .offset(skip)
         .limit(limit)
@@ -54,26 +56,18 @@ def get_user_links(
 )
 def create_link(
     request: LinkCreateRequest,
-    user_id: int = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Create a new short link."""
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise AppException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found",
-            error_code="USER_NOT_FOUND",
-        )
-
-    if not user.is_premium:
+    if not current_user.is_premium:
         month_start = datetime.utcnow().replace(
             day=1, hour=0, minute=0, second=0, microsecond=0
         )
         links_this_month = (
             db.query(func.count(Link.id))
             .filter(
-                Link.user_id == user_id,
+                Link.user_id == current_user.id,
                 Link.created_at >= month_start,
             )
             .scalar()
@@ -106,7 +100,7 @@ def create_link(
         code = generate_short_code(db)
 
     link = Link(
-        user_id=user_id,
+        user_id=current_user.id,
         code=code,
         target_url=str(request.target_url),
         title=request.title,
@@ -125,11 +119,15 @@ def create_link(
 @router.delete("/{code}", response_model=LinkDeleteResponse)
 def delete_link(
     code: str,
-    user_id: int = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Delete a short link."""
-    link = db.query(Link).filter(Link.code == code, Link.user_id == user_id).first()
+    link = (
+        db.query(Link)
+        .filter(Link.code == code, Link.user_id == current_user.id)
+        .first()
+    )
     if not link:
         raise AppException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -146,11 +144,15 @@ def delete_link(
 @router.get("/{code}", response_model=LinkResponse)
 def get_link_details(
     code: str,
-    user_id: int = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Get details of a specific link."""
-    link = db.query(Link).filter(Link.code == code, Link.user_id == user_id).first()
+    link = (
+        db.query(Link)
+        .filter(Link.code == code, Link.user_id == current_user.id)
+        .first()
+    )
     if not link:
         raise AppException(
             status_code=status.HTTP_404_NOT_FOUND,
