@@ -66,7 +66,7 @@ Run migrations (configure your database URL first in environment variables):
 bash
 alembic upgrade head
 
-This creates the required PostgreSQL schema.
+This creates the required PostgreSQL schema. The application does not create or update tables at runtime; run Alembic migrations before starting or restarting the API in every deployment.
 
 ▶️ Running the Application
 bash
@@ -417,11 +417,13 @@ pip install -r requirements.txt
 
 # Setup database
 createdb gateway_hub
-alembic upgrade head
 
-# Create .env file
+# Create .env file before migrations
 cp .env.example .env
 # Edit .env with production values
+
+# Run schema migrations explicitly before starting the service
+./scripts/migrate.sh
 ```
 
 ### 8.2 Systemd Service File
@@ -577,6 +579,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY app/ ./app/
 COPY migrations/ ./migrations/
 COPY alembic.ini .
+COPY scripts/ ./scripts/
 
 # Create non-root user
 RUN useradd -m appuser && chown -R appuser:appuser /app
@@ -586,6 +589,8 @@ USER appuser
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD python -c "import httpx; httpx.get('http://localhost:8000/health')"
 
+# Run migrations as an explicit deployment step before starting this command:
+#   /app/scripts/migrate.sh
 # Run application
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 ```
@@ -623,6 +628,18 @@ services:
       timeout: 5s
       retries: 5
 
+  migrate:
+    build: .
+    container_name: gateway-hub-migrate
+    environment:
+      DATABASE_URL: postgresql://appuser:${DB_PASSWORD}@db:5432/gateway_hub
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["/app/scripts/migrate.sh"]
+    profiles:
+      - migrations
+
   backend:
     build: .
     container_name: gateway-hub-backend
@@ -641,7 +658,6 @@ services:
     volumes:
       - ./app:/app/app
       - ./logs:/app/logs
-    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0"
 
 volumes:
   postgres_data:
@@ -654,9 +670,15 @@ networks:
 **Run with Docker:**
 
 ```bash
-docker-compose up -d
+# Start dependencies first
+docker-compose up -d db redis
+
+# Apply schema migrations explicitly
+docker-compose run --rm migrate
+
+# Start the API after migrations have completed
+docker-compose up -d backend
 docker-compose logs -f backend
-docker-compose exec backend alembic upgrade head
 ```
 
 ### 8.5 CI/CD Pipeline (GitHub Actions)
