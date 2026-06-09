@@ -15,7 +15,7 @@ router = APIRouter(prefix="/api/v1/users", tags=["users"])
 
 
 @router.get("/stats", response_model=UserStatsResponse)
-async def get_user_stats(
+def get_user_stats(
     user_id: int = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -56,7 +56,7 @@ async def get_user_stats(
 
 
 @router.post("/upgrade")
-async def upgrade_to_premium(
+def upgrade_to_premium(
     user_id: int = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):

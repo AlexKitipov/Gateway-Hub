@@ -13,7 +13,7 @@ router = APIRouter(prefix="/r", tags=["redirect"])
 
 
 @router.get("/{code}")
-async def redirect_to_target(
+def redirect_to_target(
     code: str,
     request: Request,
     db: Session = Depends(get_db),

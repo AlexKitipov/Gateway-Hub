@@ -74,7 +74,7 @@ def verify_token(token: str, token_type: str = "access") -> dict:
         ) from exc
 
 
-async def get_current_user(
+def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ):
     """Dependency to get current authenticated user."""

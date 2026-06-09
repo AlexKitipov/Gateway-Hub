@@ -8,7 +8,9 @@ class LinkAnalytics(Base):
     __tablename__ = "link_analytics"
 
     id = Column(Integer, primary_key=True, index=True)
-    link_id = Column(Integer, ForeignKey("links.id", ondelete="CASCADE"), nullable=False, index=True)
+    link_id = Column(
+        Integer, ForeignKey("links.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     user_agent = Column(Text)
     referer = Column(Text)
     ip_address = Column(String(45), index=True)
@@ -19,6 +21,4 @@ class LinkAnalytics(Base):
     # Relationships
     link = relationship("Link", back_populates="analytics")
 
-    __table_args__ = (
-        Index("idx_analytics_link_clicked", "link_id", "clicked_at"),
-    )
+    __table_args__ = (Index("idx_analytics_link_clicked", "link_id", "clicked_at"),)

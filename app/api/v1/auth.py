@@ -19,7 +19,7 @@ router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
 @router.post("/register", response_model=AuthResponse)
 @limiter.limit("3/minute")
-async def register(
+def register(
     request: Request, payload: UserRegisterRequest, db: Session = Depends(get_db)
 ):
     """Register a new user."""
@@ -53,9 +53,7 @@ async def register(
 
 @router.post("/login", response_model=AuthResponse)
 @limiter.limit("5/minute")
-async def login(
-    request: Request, payload: UserLoginRequest, db: Session = Depends(get_db)
-):
+def login(request: Request, payload: UserLoginRequest, db: Session = Depends(get_db)):
     """Login user."""
     user = db.query(User).filter(User.email == payload.email).first()
 
@@ -84,14 +82,14 @@ async def login(
 
 
 @router.post("/logout")
-async def logout():
+def logout():
     """Logout user (client-side token deletion)."""
     return {"message": "Logged out successfully"}
 
 
 @router.post("/refresh", response_model=AuthResponse)
 @limiter.limit("10/minute")
-async def refresh_token(
+def refresh_token(
     request: Request, payload: RefreshTokenRequest, db: Session = Depends(get_db)
 ):
     """Refresh access token using refresh token."""

@@ -1,9 +1,8 @@
-from datetime import datetime, timedelta
 from collections import Counter, defaultdict
+from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.analytics import LinkAnalytics
@@ -13,25 +12,25 @@ router = APIRouter(prefix="/api/v1/analytics", tags=["analytics"])
 
 
 @router.get("/{code}")
-async def get_link_analytics(
+def get_link_analytics(
     code: str,
     days: int = Query(30, ge=1, le=365),
-    db: AsyncSession = Depends(get_db),
+    db: Session = Depends(get_db),
 ):
     cutoff = datetime.utcnow() - timedelta(days=days)
 
-    link_res = await db.execute(select(Link).where(Link.code == code))
-    link = link_res.scalar_one_or_none()
+    link = db.query(Link).filter(Link.code == code).first()
     if link is None:
         raise HTTPException(status_code=404, detail="Link not found")
 
-    rows = await db.execute(
-        select(LinkAnalytics).where(
+    analytics_rows = (
+        db.query(LinkAnalytics)
+        .filter(
             LinkAnalytics.link_id == link.id,
             LinkAnalytics.clicked_at >= cutoff,
         )
+        .all()
     )
-    analytics_rows = rows.scalars().all()
 
     countries = Counter((a.country or "--") for a in analytics_rows)
     referrers = Counter((a.referer or "Direct") for a in analytics_rows)
