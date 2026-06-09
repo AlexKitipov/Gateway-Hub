@@ -86,9 +86,16 @@ class Settings(BaseSettings):
     PREMIUM_TIER_LINKS_PER_MONTH: int = 1000000
     PREMIUM_TIER_CLICKS_PER_LINK: int = 1000000
 
-    # Stripe
+    # Billing
+    # Mock billing is intended for development/demo environments only.
+    ENABLE_MOCK_BILLING: bool = False
+
+    # Stripe placeholders for the production billing integration.
     STRIPE_API_KEY: Optional[str] = None
     STRIPE_WEBHOOK_SECRET: Optional[str] = None
+    STRIPE_PRICE_ID: Optional[str] = None
+    STRIPE_SUCCESS_URL: Optional[str] = None
+    STRIPE_CANCEL_URL: Optional[str] = None
 
     # Email
     SMTP_SERVER: str = "smtp.gmail.com"

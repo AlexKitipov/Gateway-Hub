@@ -26,8 +26,7 @@ Custom domain support (demo placeholder)
 
 Priority usage limits
 
-Note: Payment flow is mocked for demonstration.
-In production, integrate Stripe, PayPal, or another billing provider.
+Note: Payment flow is mocked for demonstration. The mock upgrade endpoint is disabled when `ENVIRONMENT=production` unless `ENABLE_MOCK_BILLING=true` is explicitly set for a controlled demo. In production, integrate Stripe, PayPal, or another billing provider.
 
 🏗️ Tech Stack
 Python 3.10+
@@ -77,6 +76,8 @@ The service will be available at:
 http://127.0.0.1:8000
 🔐 Security Notes
 Replace the default dev-secret-key with a secure key in production. The application refuses to start when `ENVIRONMENT=production` and `SECRET_KEY` is blank or still set to a placeholder value.
+
+Keep `ENABLE_MOCK_BILLING=false` in production so demo premium upgrades cannot grant paid access. The Stripe placeholder settings (`STRIPE_API_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID`, `STRIPE_SUCCESS_URL`, and `STRIPE_CANCEL_URL`) are reserved for the production billing integration.
 
 Configure short-link generation with `SHORT_CODE_LENGTH`, `SHORT_CODE_ALPHABET`, and `SHORT_URL_BASE` (for example, `https://yourdomain.com/r`). `ALLOWED_ORIGINS` accepts a comma-separated list such as `https://app.example.com,https://admin.example.com`.
 
@@ -211,13 +212,21 @@ POST /api/v1/users/upgrade
 Authorization: Bearer <token>
 ```
 
-Response `200`:
+Response `200` (development/demo mock billing only):
 
 ```json
 {
   "success": true,
   "message": "Upgraded to premium",
   "premium_until": "2025-01-15T10:30:00Z"
+}
+```
+
+Response `403` when `ENVIRONMENT=production` and `ENABLE_MOCK_BILLING=false`:
+
+```json
+{
+  "detail": "Mock premium upgrades are disabled in production. Configure Stripe billing or set ENABLE_MOCK_BILLING=true only for controlled demos."
 }
 ```
 
