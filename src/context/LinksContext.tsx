@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useState } from 'react';
-import { apiClient } from '../services/api';
+import { linksAPI, userAPI } from '../services/api';
 import {
   LinksContextType,
   ShortLink,
@@ -25,12 +25,12 @@ export const LinksProvider: React.FC<LinksProviderProps> = ({ children }) => {
     try {
       setError(null);
       setIsLoading(true);
-      const [linksData, statsData] = await Promise.all([
-        apiClient.getLinks(),
-        apiClient.getUserStats(),
+      const [linksResponse, statsResponse] = await Promise.all([
+        linksAPI.getAll(),
+        userAPI.getStats(),
       ]);
-      setLinks(linksData);
-      setStats(statsData);
+      setLinks(linksResponse.data.links);
+      setStats(statsResponse.data);
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : 'Failed to fetch links';
@@ -45,8 +45,18 @@ export const LinksProvider: React.FC<LinksProviderProps> = ({ children }) => {
       try {
         setError(null);
         setIsLoading(true);
-        const newLink = await apiClient.createLink(data);
+        const response = await linksAPI.create(data);
+        const newLink = response.data;
         setLinks((prev) => [newLink, ...prev]);
+        setStats((prev) =>
+          prev
+            ? {
+                ...prev,
+                total_links: prev.total_links + 1,
+                links_this_month: prev.links_this_month + 1,
+              }
+            : prev
+        );
         return newLink;
       } catch (err) {
         const errorMessage =
@@ -64,8 +74,11 @@ export const LinksProvider: React.FC<LinksProviderProps> = ({ children }) => {
     try {
       setError(null);
       setIsLoading(true);
-      await apiClient.deleteLink(code);
+      await linksAPI.delete(code);
       setLinks((prev) => prev.filter((link) => link.code !== code));
+      setStats((prev) =>
+        prev ? { ...prev, total_links: Math.max(prev.total_links - 1, 0) } : prev
+      );
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : 'Failed to delete link';
@@ -80,10 +93,16 @@ export const LinksProvider: React.FC<LinksProviderProps> = ({ children }) => {
     try {
       setError(null);
       setIsLoading(true);
-      await apiClient.upgradeAccount();
-      if (stats) {
-        setStats({ ...stats, plan: 'premium' });
-      }
+      const response = await userAPI.upgrade();
+      setStats((prev) =>
+        prev
+          ? {
+              ...prev,
+              is_premium: true,
+              premium_until: response.data.premium_until,
+            }
+          : prev
+      );
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : 'Failed to upgrade account';
@@ -92,13 +111,13 @@ export const LinksProvider: React.FC<LinksProviderProps> = ({ children }) => {
     } finally {
       setIsLoading(false);
     }
-  }, [stats]);
+  }, []);
 
   const value: LinksContextType = {
     links,
+    stats,
     isLoading,
     error,
-    stats,
     fetchLinks,
     createLink,
     deleteLink,

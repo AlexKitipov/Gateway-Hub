@@ -4,6 +4,7 @@ export interface User {
   full_name: string | null;
   is_premium: boolean;
   is_active: boolean;
+  premium_until?: string | null;
   created_at: string;
 }
 
@@ -26,22 +27,42 @@ export interface UserStats {
   links_this_month: number;
   is_premium: boolean;
   premium_until: string | null;
-  links_limit: number;
-  links_remaining: number;
+}
+
+export interface CreateLinkRequest {
+  target_url: string;
+  title?: string;
+  description?: string;
+  custom_code?: string;
+  expires_at?: string;
+}
+
+export interface LinkListResponse {
+  total: number;
+  limit: number;
+  offset: number;
+  links: ShortLink[];
+}
+
+export interface DeleteLinkResponse {
+  success: boolean;
+  message: string;
+}
+
+export interface UpgradeResponse {
+  success: boolean;
+  message: string;
+  premium_until: string;
 }
 
 export interface AuthResponse {
-  success: boolean;
   user: User;
   access_token: string;
   refresh_token: string;
   token_type: string;
 }
 
-export interface LinkResponse {
-  success: boolean;
-  link: ShortLink;
-}
+export type LinkResponse = ShortLink;
 
 export interface ErrorResponse {
   success: false;
@@ -56,6 +77,7 @@ export type AuthContextType = {
   user: User | null;
   token: string | null;
   loading: boolean;
+  isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, full_name?: string) => Promise<void>;
   logout: () => void;
@@ -64,8 +86,10 @@ export type AuthContextType = {
 export type LinksContextType = {
   links: ShortLink[];
   stats: UserStats | null;
-  loading: boolean;
-  createLink: (targetUrl: string, title?: string, description?: string) => Promise<ShortLink>;
+  isLoading: boolean;
+  error: string | null;
+  fetchLinks: () => Promise<void>;
+  createLink: (data: CreateLinkRequest) => Promise<ShortLink>;
   deleteLink: (code: string) => Promise<void>;
-  fetchStats: () => Promise<void>;
+  upgradeAccount: () => Promise<void>;
 };

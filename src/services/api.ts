@@ -1,10 +1,19 @@
 import axios, { AxiosError, AxiosInstance } from 'axios';
-import { AuthResponse, LinkResponse, ErrorResponse } from '../types';
-
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+import {
+  AuthResponse,
+  CreateLinkRequest,
+  DeleteLinkResponse,
+  ErrorResponse,
+  LinkListResponse,
+  LinkResponse,
+  UpgradeResponse,
+  User,
+  UserStats,
+} from '../types';
+import { API_URL } from '../config';
 
 export const apiClient: AxiosInstance = axios.create({
-  baseURL: `${API_URL}/api/v1`,
+  baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -31,11 +40,13 @@ apiClient.interceptors.response.use(
       const refreshToken = localStorage.getItem('refresh_token');
       if (refreshToken) {
         try {
-          const response = await axios.post(`${API_URL}/api/v1/auth/refresh`, {
+          const response = await axios.post<AuthResponse>(`${API_URL}/auth/refresh`, {
             refresh_token: refreshToken,
           });
-          const newAccessToken = response.data.access_token;
-          localStorage.setItem('access_token', newAccessToken);
+          const { access_token, refresh_token, user } = response.data;
+          localStorage.setItem('access_token', access_token);
+          localStorage.setItem('refresh_token', refresh_token);
+          localStorage.setItem('user', JSON.stringify(user));
 
           // Retry original request
           return apiClient(error.config!);
@@ -43,6 +54,7 @@ apiClient.interceptors.response.use(
           // Refresh failed, redirect to login
           localStorage.removeItem('access_token');
           localStorage.removeItem('refresh_token');
+          localStorage.removeItem('user');
           window.location.href = '/login';
         }
       }
@@ -69,33 +81,30 @@ export const authAPI = {
   logout: () => apiClient.post('/auth/logout'),
 
   refresh: (refreshToken: string) =>
-    apiClient.post('/auth/refresh', { refresh_token: refreshToken }),
+    apiClient.post<AuthResponse>('/auth/refresh', { refresh_token: refreshToken }),
 };
 
 // User endpoints
 export const userAPI = {
-  getMe: () => apiClient.get('/users/me'),
-  getStats: () => apiClient.get('/users/stats'),
-  upgrade: (plan: string) =>
-    apiClient.post('/users/upgrade', { plan }),
+  getMe: () => apiClient.get<User>('/users/me'),
+  getStats: () => apiClient.get<UserStats>('/users/stats'),
+  upgrade: () => apiClient.post<UpgradeResponse>('/users/upgrade'),
 };
 
 // Links endpoints
 export const linksAPI = {
   getAll: (skip = 0, limit = 50) =>
-    apiClient.get(`/links?skip=${skip}&limit=${limit}`),
+    apiClient.get<LinkListResponse>('/links/', { params: { skip, limit } }),
 
-  getOne: (code: string) => apiClient.get(`/links/${code}`),
+  getOne: (code: string) => apiClient.get<LinkResponse>(`/links/${code}`),
 
-  create: (targetUrl: string, title?: string, description?: string) =>
-    apiClient.post<LinkResponse>('/links/create', {
-      target_url: targetUrl,
-      title,
-      description,
-    }),
+  create: (data: CreateLinkRequest) =>
+    apiClient.post<LinkResponse>('/links/create', data),
 
-  delete: (code: string) => apiClient.delete(`/links/${code}`),
+  delete: (code: string) => apiClient.delete<DeleteLinkResponse>(`/links/${code}`),
 
   getAnalytics: (code: string, days = 30) =>
-    apiClient.get(`/analytics/${code}?days=${days}`),
+    apiClient.get(`/analytics/${code}`, { params: { days } }),
 };
+
+export { API_BASE_URL, API_URL } from '../config';

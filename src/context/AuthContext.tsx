@@ -136,6 +136,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         login,
         register,
         logout,
+        isAuthenticated: Boolean(state.user && state.token),
       }}
     >
       {children}
