@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.database.session import get_db
 from app.models.link import Link
 from app.models.user import User
@@ -51,12 +52,27 @@ def get_user_stats(
     )
 
 
+def _mock_billing_enabled() -> bool:
+    return settings.ENVIRONMENT.lower() != "production" or settings.ENABLE_MOCK_BILLING
+
+
 @router.post("/upgrade")
 def upgrade_to_premium(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Upgrade user to premium."""
+    """Upgrade user to premium using the development/demo mock billing flow."""
+    if not _mock_billing_enabled():
+        raise AppException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=(
+                "Mock premium upgrades are disabled in production. "
+                "Configure Stripe billing or set ENABLE_MOCK_BILLING=true only "
+                "for controlled demos."
+            ),
+            error_code="MOCK_BILLING_DISABLED",
+        )
+
     if current_user.is_premium:
         raise AppException(
             status_code=status.HTTP_400_BAD_REQUEST,
