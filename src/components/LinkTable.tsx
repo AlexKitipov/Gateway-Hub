@@ -57,13 +57,13 @@ export const LinkTable: React.FC = () => {
                   <code>{link.code}</code>
                 </td>
                 <td className={styles.targetCell}>
-                  <a href={link.target} target="_blank" rel="noreferrer">
-                    {link.target.length > 50
-                      ? link.target.substring(0, 50) + '...'
-                      : link.target}
+                  <a href={link.target_url} target="_blank" rel="noreferrer">
+                    {link.target_url.length > 50
+                      ? link.target_url.substring(0, 50) + '...'
+                      : link.target_url}
                   </a>
                 </td>
-                <td className={styles.clicksCell}>{link.clicks}</td>
+                <td className={styles.clicksCell}>{link.click_count}</td>
                 <td>{new Date(link.created_at).toLocaleDateString()}</td>
                 <td className={styles.actionsCell}>
                   <button
@@ -90,3 +90,5 @@ export const LinkTable: React.FC = () => {
     </div>
   );
 };
+
+export default LinkTable;

@@ -42,7 +42,7 @@ export const LinkForm: React.FC<{ isPremium: boolean; linksThisMonth: number }> 
     try {
       setLoading(true);
       const newLink = await createLink({
-        target,
+        target_url: target,
         custom_code: customCode || undefined,
       });
       setSuccess(`Link created: /${newLink.code}`);
@@ -113,3 +113,5 @@ export const LinkForm: React.FC<{ isPremium: boolean; linksThisMonth: number }> 
     </div>
   );
 };
+
+export default LinkForm;

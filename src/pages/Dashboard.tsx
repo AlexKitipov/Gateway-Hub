@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom';
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
-  const { links, stats, loading, fetchLinks, fetchStats, upgrade } = useLinks();
+  const { stats, isLoading, fetchLinks, upgradeAccount } = useLinks();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -16,12 +16,11 @@ const Dashboard: React.FC = () => {
       return;
     }
     fetchLinks();
-    fetchStats();
-  }, [user, fetchLinks, fetchStats, navigate]);
+  }, [user, fetchLinks, navigate]);
 
   const handleUpgrade = async () => {
     try {
-      await upgrade();
+      await upgradeAccount();
     } catch (err) {
       console.error('Upgrade failed:', err);
     }
@@ -31,11 +30,14 @@ const Dashboard: React.FC = () => {
     return <div>Redirecting...</div>;
   }
 
+  const isPremium = stats?.is_premium ?? user.is_premium;
+  const linksThisMonth = stats?.links_this_month ?? 0;
+
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <h1>Dashboard</h1>
-        {!user.is_premium && (
+        {!isPremium && (
           <button
             onClick={handleUpgrade}
             style={{
@@ -59,7 +61,7 @@ const Dashboard: React.FC = () => {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
           <div style={{ backgroundColor: '#f3f4f6', padding: '1rem', borderRadius: '8px' }}>
             <div style={{ fontSize: '0.9rem', color: '#666' }}>Plan</div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{user.is_premium ? 'Premium' : 'Free'}</div>
+            <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{isPremium ? 'Premium' : 'Free'}</div>
           </div>
           <div style={{ backgroundColor: '#f3f4f6', padding: '1rem', borderRadius: '8px' }}>
             <div style={{ fontSize: '0.9rem', color: '#666' }}>Total Links</div>
@@ -79,17 +81,13 @@ const Dashboard: React.FC = () => {
       {/* Create Link Form */}
       <div style={{ marginBottom: '2rem' }}>
         <h2 style={{ marginBottom: '1rem' }}>Create New Short Link</h2>
-        <LinkForm />
+        <LinkForm isPremium={isPremium} linksThisMonth={linksThisMonth} />
       </div>
 
       {/* Links Table */}
       <div>
         <h2 style={{ marginBottom: '1rem' }}>Your Links</h2>
-        {loading ? (
-          <p>Loading...</p>
-        ) : (
-          <LinkTable links={links} isPremium={user.is_premium} />
-        )}
+        {isLoading ? <p>Loading...</p> : <LinkTable />}
       </div>
     </div>
   );
