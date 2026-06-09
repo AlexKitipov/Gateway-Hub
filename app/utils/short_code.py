@@ -6,7 +6,7 @@ from app.config import settings
 from app.models.link import Link
 
 
-async def generate_short_code(db: Session, length: int = None) -> str:
+def generate_short_code(db: Session, length: int = None) -> str:
     """Generate a unique short code"""
     if length is None:
         length = settings.SHORT_CODE_LENGTH
@@ -21,7 +21,7 @@ async def generate_short_code(db: Session, length: int = None) -> str:
         if not existing:
             return code
 
-    return await generate_short_code(db, length + 1)
+    return generate_short_code(db, length + 1)
 
 
 def validate_custom_code(code: str) -> bool:

@@ -22,7 +22,7 @@ router = APIRouter(prefix="/api/v1/links", tags=["links"])
 
 
 @router.get("/", response_model=LinkListResponse)
-async def get_user_links(
+def get_user_links(
     user_id: int = Depends(get_current_user),
     db: Session = Depends(get_db),
     skip: int = Query(0, ge=0),
@@ -52,7 +52,7 @@ async def get_user_links(
 @router.post(
     "/create", response_model=LinkResponse, status_code=status.HTTP_201_CREATED
 )
-async def create_link(
+def create_link(
     request: LinkCreateRequest,
     user_id: int = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -103,7 +103,7 @@ async def create_link(
             )
         code = request.custom_code
     else:
-        code = await generate_short_code(db)
+        code = generate_short_code(db)
 
     link = Link(
         user_id=user_id,
@@ -123,7 +123,7 @@ async def create_link(
 
 
 @router.delete("/{code}", response_model=LinkDeleteResponse)
-async def delete_link(
+def delete_link(
     code: str,
     user_id: int = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -144,7 +144,7 @@ async def delete_link(
 
 
 @router.get("/{code}", response_model=LinkResponse)
-async def get_link_details(
+def get_link_details(
     code: str,
     user_id: int = Depends(get_current_user),
     db: Session = Depends(get_db),

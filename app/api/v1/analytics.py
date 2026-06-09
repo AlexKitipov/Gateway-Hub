@@ -15,7 +15,7 @@ router = APIRouter(prefix="/api/v1/analytics", tags=["analytics"])
 
 
 @router.get("/{code}", response_model=LinkAnalyticsResponse)
-async def get_link_analytics(
+def get_link_analytics(
     code: str,
     user_id: int = Depends(get_current_user),
     db: Session = Depends(get_db),

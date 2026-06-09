@@ -53,7 +53,7 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-password123}
       DB_NAME: ${DB_NAME:-gateway_hub}
 
-      DATABASE_URL: postgresql+asyncpg://${DB_USER:-appuser}:${DB_PASSWORD:-password123}@postgres:5432/${DB_NAME:-gateway_hub}
+      DATABASE_URL: postgresql://${DB_USER:-appuser}:${DB_PASSWORD:-password123}@postgres:5432/${DB_NAME:-gateway_hub}
 
     depends_on:
       postgres:
