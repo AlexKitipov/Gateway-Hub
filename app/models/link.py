@@ -10,7 +10,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 from datetime import datetime
-from app.database import Base
+from app.database.base import Base
 
 
 class Link(Base):
