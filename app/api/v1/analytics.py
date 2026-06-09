@@ -8,7 +8,8 @@ from app.database.session import get_db
 from app.models.analytics import LinkAnalytics
 from app.models.link import Link
 from app.schemas.analytics import LinkAnalyticsResponse
-from app.security import get_current_user
+from app.dependencies import get_current_user
+from app.models.user import User
 from app.utils.exceptions import AppException
 
 router = APIRouter(prefix="/api/v1/analytics", tags=["analytics"])
@@ -17,12 +18,16 @@ router = APIRouter(prefix="/api/v1/analytics", tags=["analytics"])
 @router.get("/{code}", response_model=LinkAnalyticsResponse)
 def get_link_analytics(
     code: str,
-    user_id: int = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
     days: int = Query(30, ge=1, le=365),
 ):
     """Get analytics for a specific link."""
-    link = db.query(Link).filter(Link.code == code, Link.user_id == user_id).first()
+    link = (
+        db.query(Link)
+        .filter(Link.code == code, Link.user_id == current_user.id)
+        .first()
+    )
     if not link:
         raise AppException(
             status_code=status.HTTP_404_NOT_FOUND,
